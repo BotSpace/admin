@@ -276,17 +276,14 @@ export type Plan = {
   id: number;
   name: string;
   price: string;
-  max_users: number;
   max_bots: number;
   max_input_tokens: number;
   max_output_tokens: number;
-  custom_domain: boolean;
-  priority_support: boolean;
   description?: string;
   is_top: boolean;
   is_active: boolean;
   order: number;
-  features?: string[];
+  features?: Record<string, unknown> | string[];
 };
 
 // ── Audit log types ────────────────────────────────────────────────────────

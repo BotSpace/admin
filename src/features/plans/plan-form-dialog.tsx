@@ -20,12 +20,9 @@ import { Plus, Pencil } from "lucide-react";
 type FormState = {
   name: string;
   price: string;
-  max_users: string;
   max_bots: string;
   max_input_tokens: string;
   max_output_tokens: string;
-  custom_domain: boolean;
-  priority_support: boolean;
   description: string;
   is_top: boolean;
   is_active: boolean;
@@ -35,12 +32,9 @@ type FormState = {
 const defaultForm: FormState = {
   name: "",
   price: "0",
-  max_users: "0",
-  max_bots: "0",
-  max_input_tokens: "0",
-  max_output_tokens: "0",
-  custom_domain: false,
-  priority_support: false,
+  max_bots: "1",
+  max_input_tokens: "800000",
+  max_output_tokens: "200000",
   description: "",
   is_top: false,
   is_active: true,
@@ -51,12 +45,9 @@ function planToForm(plan: Plan): FormState {
   return {
     name: plan.name,
     price: plan.price,
-    max_users: String(plan.max_users),
     max_bots: String(plan.max_bots),
     max_input_tokens: String(plan.max_input_tokens),
     max_output_tokens: String(plan.max_output_tokens),
-    custom_domain: plan.custom_domain,
-    priority_support: plan.priority_support,
     description: plan.description ?? "",
     is_top: plan.is_top,
     is_active: plan.is_active,
@@ -85,12 +76,9 @@ export function PlanFormDialog({ plan }: Props) {
     const body = {
       name: form.name,
       price: form.price,
-      max_users: Number(form.max_users),
       max_bots: Number(form.max_bots),
       max_input_tokens: Number(form.max_input_tokens),
       max_output_tokens: Number(form.max_output_tokens),
-      custom_domain: form.custom_domain,
-      priority_support: form.priority_support,
       description: form.description || undefined,
       is_top: form.is_top,
       is_active: form.is_active,
@@ -140,11 +128,7 @@ export function PlanFormDialog({ plan }: Props) {
             <Input type="number" value={form.order} onChange={(e) => set("order", e.target.value)} />
           </div>
           <div className="space-y-1">
-            <Label>Max foydalanuvchilar</Label>
-            <Input type="number" value={form.max_users} onChange={(e) => set("max_users", e.target.value)} />
-          </div>
-          <div className="space-y-1">
-            <Label>Max botlar</Label>
+            <Label>Max botlar (0 = cheksiz)</Label>
             <Input type="number" value={form.max_bots} onChange={(e) => set("max_bots", e.target.value)} />
           </div>
           <div className="space-y-1">
@@ -158,14 +142,6 @@ export function PlanFormDialog({ plan }: Props) {
           <div className="col-span-2 space-y-1">
             <Label>Tavsif</Label>
             <Input value={form.description} onChange={(e) => set("description", e.target.value)} placeholder="Ixtiyoriy..." />
-          </div>
-          <div className="flex items-center gap-3">
-            <Switch checked={form.custom_domain} onCheckedChange={(v) => set("custom_domain", v)} />
-            <Label>Maxsus domen</Label>
-          </div>
-          <div className="flex items-center gap-3">
-            <Switch checked={form.priority_support} onCheckedChange={(v) => set("priority_support", v)} />
-            <Label>Ustuvor qo&apos;llab-quvvatlash</Label>
           </div>
           <div className="flex items-center gap-3">
             <Switch checked={form.is_top} onCheckedChange={(v) => set("is_top", v)} />
