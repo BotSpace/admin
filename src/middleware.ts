@@ -140,7 +140,15 @@ export default async function middleware(request: NextRequest) {
 
   if (!isAuthed) {
     const dashboardUrl = env.NEXT_PUBLIC_DASHBOARD_URL.replace(/\/$/, "");
-    const from = encodeURIComponent(request.url);
+    // Behind the gateway the request URL host is the internal pod address
+    // (localhost:3020). Rebuild the public origin from forwarded headers so
+    // the login `from` points back to admin.botspace.uz, not localhost.
+    const fwdProto = request.headers.get("x-forwarded-proto") ?? "https";
+    const fwdHost = request.headers.get("x-forwarded-host") ?? request.headers.get("host");
+    const publicUrl = fwdHost
+      ? `${fwdProto}://${fwdHost}${request.nextUrl.pathname}${request.nextUrl.search}`
+      : request.url;
+    const from = encodeURIComponent(publicUrl);
     const loginUrl = `${dashboardUrl}/login?from=${from}`;
     const redirect = NextResponse.redirect(loginUrl);
     if (state.kind === "broken") clearSessionCookie(redirect);
