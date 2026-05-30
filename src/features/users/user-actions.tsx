@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 import { toast } from "sonner";
-import { AdminUser } from "@/shared/api/services";
+import { AdminUserDetail } from "@/shared/api/services";
 import { ConfirmDialog } from "@/shared/components/confirm-dialog";
 import { Button } from "@/shared/components/ui/button";
 import {
@@ -18,7 +18,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { banUserAction, adjustBalanceAction } from "./actions";
 import { ShieldOff, ShieldCheck, DollarSign } from "lucide-react";
 
-export function UserActions({ user }: { user: AdminUser }) {
+export function UserActions({ user }: { user: AdminUserDetail }) {
   return (
     <div className="flex flex-wrap gap-3">
       <BanToggle user={user} />
@@ -27,7 +27,7 @@ export function UserActions({ user }: { user: AdminUser }) {
   );
 }
 
-function BanToggle({ user }: { user: AdminUser }) {
+function BanToggle({ user }: { user: AdminUserDetail }) {
   async function handle() {
     const res = await banUserAction(user.id, !user.is_active);
     if (res.ok) {
@@ -61,7 +61,7 @@ function BanToggle({ user }: { user: AdminUser }) {
   );
 }
 
-function BalanceDialog({ user }: { user: AdminUser }) {
+function BalanceDialog({ user }: { user: AdminUserDetail }) {
   const [open, setOpen] = useState(false);
   const [field, setField] = useState<"balance" | "template_balance">("balance");
   const [value, setValue] = useState("");

@@ -31,6 +31,7 @@ export type DashboardStats = {
 
 // ── User types ─────────────────────────────────────────────────────────────
 
+/** Lightweight shape used in the list view */
 export type AdminUser = {
   id: number;
   phone: string;
@@ -39,12 +40,82 @@ export type AdminUser = {
   first_name: string;
   last_name: string;
   role: string;
-  balance: string;
+  balance: number;
   template_balance: string;
   is_active: boolean;
   is_staff: boolean;
   is_superuser: boolean;
   date_joined: string;
+};
+
+export type AdminUserSubscription = {
+  plan: string;
+  plan_name: string;
+  status: string;
+  started_at: string | null;
+  expires_at: string | null;
+  token_reset_at: string | null;
+  bots_count: number;
+  tokens_used_input: number;
+  tokens_used_output: number;
+  tokens_used_total: number;
+  token_limit: number;
+  max_input_tokens: number;
+  max_output_tokens: number;
+  max_bots: number;
+};
+
+export type AdminUserProject = {
+  id: number;
+  name: string;
+  username: string;
+  is_template: boolean;
+  created_at: string;
+};
+
+export type AdminUserPurchasedTemplate = {
+  id: number;
+  template_id: number;
+  template_name: string;
+  amount: string;
+  status: string;
+  payment_status: string;
+  created_at: string;
+};
+
+export type AdminUserAuthoredTemplate = {
+  id: number;
+  name: string;
+  slug: string;
+  is_verify: boolean;
+  views: number;
+  original_price: string;
+  created_at: string;
+};
+
+/** Rich shape returned by GET /api/v1/admin/users/{id}/ */
+export type AdminUserDetail = {
+  id: number;
+  phone: string;
+  email: string;
+  username: string;
+  first_name: string;
+  last_name: string;
+  role: string;
+  is_active: boolean;
+  is_staff: boolean;
+  is_superuser: boolean;
+  date_joined: string;
+  validated_at: string | null;
+  balance: number;
+  template_balance: string;
+  subscription: AdminUserSubscription | null;
+  projects: AdminUserProject[];
+  projects_count: number;
+  purchased_templates: AdminUserPurchasedTemplate[];
+  purchased_count: number;
+  authored_templates: AdminUserAuthoredTemplate[];
+  authored_count: number;
 };
 
 // ── Project types ──────────────────────────────────────────────────────────
@@ -175,6 +246,13 @@ export const AdminAPI = {
     search?: string;
     role?: string;
     is_active?: string;
+    is_staff?: string;
+    plan?: string;
+    joined_after?: string;
+    joined_before?: string;
+    balance_min?: string;
+    balance_max?: string;
+    ordering?: string;
     page?: number;
   }): Promise<Page<AdminUser>> {
     const raw = await api<Envelope<Page<AdminUser>>>("/api/v1/admin/users/", {
@@ -183,16 +261,16 @@ export const AdminAPI = {
     return unwrap(raw);
   },
 
-  async user(id: number): Promise<AdminUser> {
-    const raw = await api<Envelope<AdminUser>>(`/api/v1/admin/users/${id}/`);
+  async user(id: number): Promise<AdminUserDetail> {
+    const raw = await api<Envelope<AdminUserDetail>>(`/api/v1/admin/users/${id}/`);
     return unwrap(raw);
   },
 
   async banUser(
     id: number,
     body: { is_active: boolean; note?: string }
-  ): Promise<AdminUser> {
-    const raw = await api<Envelope<AdminUser>>(`/api/v1/admin/users/${id}/ban/`, {
+  ): Promise<AdminUserDetail> {
+    const raw = await api<Envelope<AdminUserDetail>>(`/api/v1/admin/users/${id}/ban/`, {
       method: "PATCH",
       json: body,
     });
@@ -202,8 +280,8 @@ export const AdminAPI = {
   async adjustBalance(
     id: number,
     body: { field: "balance" | "template_balance"; value: string; note?: string }
-  ): Promise<AdminUser> {
-    const raw = await api<Envelope<AdminUser>>(`/api/v1/admin/users/${id}/balance/`, {
+  ): Promise<AdminUserDetail> {
+    const raw = await api<Envelope<AdminUserDetail>>(`/api/v1/admin/users/${id}/balance/`, {
       method: "PATCH",
       json: body,
     });
