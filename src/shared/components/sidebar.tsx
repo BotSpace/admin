@@ -15,6 +15,7 @@ import {
   ChevronDown,
   ChevronRight,
   ShieldCheck,
+  Megaphone,
 } from "lucide-react";
 import { cn } from "@/shared/lib/utils";
 import { useState } from "react";
@@ -64,6 +65,11 @@ const NAV: NavItem[] = [
     label: "Tariflar",
     href: "/plans",
     icon: <CreditCard className="h-4 w-4" />,
+  },
+  {
+    label: "Broadcast",
+    href: "/broadcast",
+    icon: <Megaphone className="h-4 w-4" />,
   },
   {
     label: "Ticketlar",

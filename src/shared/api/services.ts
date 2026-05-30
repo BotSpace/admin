@@ -286,6 +286,23 @@ export type Plan = {
   features?: Record<string, unknown> | string[];
 };
 
+// ── Broadcast / Message types ──────────────────────────────────────────────
+
+export type BroadcastMessage = {
+  id: number;
+  caption: string;
+  message_type: string;
+  status: string;
+  total: number;
+  done: number;
+  fail: number;
+};
+
+export type SendBroadcastBody = {
+  project: number;
+  caption: string;
+};
+
 // ── Audit log types ────────────────────────────────────────────────────────
 
 export type AuditLog = {
@@ -547,6 +564,25 @@ export const AdminAPI = {
   // Tickets (placeholder)
   async tickets(): Promise<{ results: unknown[]; count: number; detail?: string }> {
     return api("/api/v1/admin/tickets/");
+  },
+
+  // Broadcast / Messages
+  async sendBroadcast(body: SendBroadcastBody): Promise<BroadcastMessage> {
+    return api<BroadcastMessage>("/api/message/", {
+      method: "POST",
+      json: { ...body, message_type: "text", button_type: "reply" },
+    });
+  },
+
+  async broadcastList(projectId: number): Promise<BroadcastMessage[]> {
+    type ListEnvelope = { results?: BroadcastMessage[] } | BroadcastMessage[];
+    const raw = await api<ListEnvelope>("/api/message/", {
+      query: { project: projectId },
+    });
+    if (Array.isArray(raw)) return raw;
+    if (raw && typeof raw === "object" && "results" in raw && Array.isArray(raw.results))
+      return raw.results;
+    return [];
   },
 
   // Audit log
