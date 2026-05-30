@@ -1,5 +1,5 @@
 import "server-only";
-import { api } from "./server";
+import { api, apiFetch } from "./server";
 
 // ── Pagination envelope ────────────────────────────────────────────────────
 
@@ -123,11 +123,44 @@ export type AdminUserDetail = {
 export type AdminProject = {
   id: number;
   name: string;
-  owner: number;
+  description?: string;
+  username?: string;
+  owner_id?: number;
   owner_phone?: string;
-  is_active: boolean;
-  has_release: boolean;
+  is_template?: boolean;
+  release_webhook_uuid?: string;
   created_at: string;
+  updated_at?: string;
+  // legacy fields kept for backward compat
+  owner?: number;
+  is_active?: boolean;
+  has_release?: boolean;
+};
+
+export type AdminProjectRelease = {
+  id: number;
+  version: string;
+  status: string;
+  service_id?: string;
+  created_at: string;
+  node_count?: number;
+};
+
+export type AdminProjectDetail = {
+  id: number;
+  name: string;
+  description?: string;
+  username?: string;
+  is_template: boolean;
+  owner: { id: number; phone: string; email?: string };
+  release_webhook_uuid?: string;
+  debug_webhook_uuid?: string;
+  mongo_database?: string;
+  current_node_count: number;
+  releases: AdminProjectRelease[];
+  releases_count: number;
+  created_at: string;
+  updated_at?: string;
 };
 
 // ── Template types ─────────────────────────────────────────────────────────
@@ -135,11 +168,51 @@ export type AdminProject = {
 export type AdminTemplate = {
   id: number;
   name: string;
+  slug?: string;
+  image?: string;
+  demo_url?: string;
+  short_description?: string;
+  original_price?: string;
+  discount?: string;
+  discount_type?: string;
+  views?: number;
+  author_id?: number;
+  author_phone?: string;
+  // legacy fields kept for backward compat
   description?: string;
   author?: number;
   author_username?: string;
   is_verify: boolean;
   created_at: string;
+};
+
+export type AdminTemplateDetail = {
+  id: number;
+  name: string;
+  slug?: string;
+  image?: string;
+  demo_url?: string;
+  short_description?: string;
+  description?: string;
+  original_price?: string;
+  discount?: string;
+  discount_type?: string;
+  is_verify: boolean;
+  views: number;
+  likes?: number;
+  author: { id: number; phone: string };
+  categories: { id: number; name: string }[];
+  features: { id: number; name: string }[];
+  orders_total: number;
+  orders_confirmed: number;
+  node_count?: number;
+  created_at: string;
+  updated_at?: string;
+};
+
+export type TemplateCategory = {
+  id: number;
+  name: string;
 };
 
 export type TemplateSubmission = {
@@ -170,12 +243,31 @@ export type Withdrawal = {
 
 export type Transaction = {
   id: number;
-  user: number;
+  user?: number;
+  user_id?: number;
   user_phone?: string;
-  type: string;
   amount: string;
-  description?: string;
+  status?: boolean;
+  idempotency_key?: string;
   created_at: string;
+  updated_at?: string;
+  // legacy fields kept for backward compat
+  type?: string;
+  description?: string;
+};
+
+export type AdminTransaction = Transaction;
+
+export type AdminTransactionDetail = {
+  id: number;
+  user?: number;
+  user_id?: number;
+  user_phone?: string;
+  amount: string;
+  status?: boolean;
+  idempotency_key?: string;
+  created_at: string;
+  updated_at?: string;
 };
 
 // ── Plan types ─────────────────────────────────────────────────────────────
@@ -289,10 +381,24 @@ export const AdminAPI = {
   },
 
   // Projects
-  async projects(params?: { search?: string; owner?: number; page?: number }): Promise<Page<AdminProject>> {
+  async projects(params?: {
+    search?: string;
+    owner?: string;
+    is_template?: string;
+    has_release?: string;
+    created_after?: string;
+    created_before?: string;
+    ordering?: string;
+    page?: number;
+  }): Promise<Page<AdminProject>> {
     const raw = await api<Envelope<Page<AdminProject>>>("/api/v1/admin/projects/", {
       query: params as Record<string, string | number | boolean | undefined | null>,
     });
+    return unwrap(raw);
+  },
+
+  async project(id: number): Promise<AdminProjectDetail> {
+    const raw = await api<Envelope<AdminProjectDetail>>(`/api/v1/admin/projects/${id}/`);
     return unwrap(raw);
   },
 
@@ -304,11 +410,23 @@ export const AdminAPI = {
   async templates(params?: {
     search?: string;
     is_verify?: string;
+    category?: string;
+    author?: string;
+    price_min?: string;
+    price_max?: string;
+    created_after?: string;
+    created_before?: string;
+    ordering?: string;
     page?: number;
   }): Promise<Page<AdminTemplate>> {
     const raw = await api<Envelope<Page<AdminTemplate>>>("/api/v1/admin/templates/", {
       query: params as Record<string, string | number | boolean | undefined | null>,
     });
+    return unwrap(raw);
+  },
+
+  async template(id: number): Promise<AdminTemplateDetail> {
+    const raw = await api<Envelope<AdminTemplateDetail>>(`/api/v1/admin/templates/${id}/`);
     return unwrap(raw);
   },
 
@@ -321,6 +439,15 @@ export const AdminAPI = {
       json: body,
     });
     return unwrap(raw);
+  },
+
+  async templateCategories(): Promise<TemplateCategory[]> {
+    type CatEnvelope = { status: boolean; data: { results: TemplateCategory[] } | TemplateCategory[] };
+    const raw = await apiFetch<CatEnvelope>("/api/v1/template/category/");
+    const d = raw.data;
+    if (Array.isArray(d)) return d as TemplateCategory[];
+    if (d && typeof d === "object" && "results" in d) return (d as { results: TemplateCategory[] }).results;
+    return [];
   },
 
   // Template submissions
@@ -372,10 +499,25 @@ export const AdminAPI = {
   },
 
   // Transactions
-  async transactions(params?: { page?: number }): Promise<Page<Transaction>> {
-    const raw = await api<Envelope<Page<Transaction>>>("/api/v1/admin/transactions/", {
+  async transactions(params?: {
+    search?: string;
+    user?: string;
+    status?: string;
+    amount_min?: string;
+    amount_max?: string;
+    created_after?: string;
+    created_before?: string;
+    ordering?: string;
+    page?: number;
+  }): Promise<Page<AdminTransaction>> {
+    const raw = await api<Envelope<Page<AdminTransaction>>>("/api/v1/admin/transactions/", {
       query: params as Record<string, string | number | boolean | undefined | null>,
     });
+    return unwrap(raw);
+  },
+
+  async transaction(id: number): Promise<AdminTransactionDetail> {
+    const raw = await api<Envelope<AdminTransactionDetail>>(`/api/v1/admin/transactions/${id}/`);
     return unwrap(raw);
   },
 
