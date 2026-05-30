@@ -1,0 +1,78 @@
+fullnameOverride: "admin"
+
+image:
+  repository: registry.iprogrammer.uz/botspace/admin
+  tag: "latest"
+  pullPolicy: Always
+
+imagePullSecrets:
+  - name: iprogrammer-registry
+
+replicaCount: 1
+
+service:
+  enabled: true
+  type: NodePort
+  port: 3020
+  targetPort: 3020
+  nodePort: 30020
+
+configMaps:
+  config:
+    NODE_ENV: "production"
+    PORT: "3020"
+    NEXT_PUBLIC_API_URL: "https://api.botspace.uz"
+    NEXT_PUBLIC_DASHBOARD_URL: "https://botspace.uz"
+    SESSION_COOKIE_NAME: "bm_session"
+    SESSION_COOKIE_DOMAIN: ".botspace.uz"
+
+envFrom:
+  - secretRef:
+      name: admin-secret
+
+probes:
+  startup:
+    enabled: true
+    type: tcpSocket
+    tcpSocket:
+      port: 3020
+    initialDelaySeconds: 5
+    periodSeconds: 5
+    timeoutSeconds: 3
+    failureThreshold: 12
+  readiness:
+    enabled: true
+    type: tcpSocket
+    tcpSocket:
+      port: 3020
+    initialDelaySeconds: 10
+    periodSeconds: 10
+    timeoutSeconds: 3
+    failureThreshold: 3
+  liveness:
+    enabled: true
+    type: tcpSocket
+    tcpSocket:
+      port: 3020
+    initialDelaySeconds: 15
+    periodSeconds: 15
+    timeoutSeconds: 3
+    failureThreshold: 3
+
+resources:
+  requests:
+    cpu: "100m"
+    memory: "256Mi"
+  limits:
+    cpu: "1000m"
+    memory: "1Gi"
+
+affinity:
+  nodeAffinity:
+    requiredDuringSchedulingIgnoredDuringExecution:
+      nodeSelectorTerms:
+        - matchExpressions:
+            - key: kubernetes.io/hostname
+              operator: NotIn
+              values:
+                - base

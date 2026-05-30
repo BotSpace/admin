@@ -1,0 +1,348 @@
+import "server-only";
+import { api } from "./server";
+
+// ── Pagination envelope ────────────────────────────────────────────────────
+
+export type Page<T> = {
+  results: T[];
+  total_items: number;
+  total_pages: number;
+  current_page: number;
+  page_size: number;
+};
+
+type Envelope<T> = { data: T };
+
+function unwrap<T>(raw: Envelope<T>): T {
+  return raw.data;
+}
+
+// ── Stats ──────────────────────────────────────────────────────────────────
+
+export type DashboardStats = {
+  users: { total: number; active: number; new_7d: number; new_30d: number };
+  projects: { total: number; with_release: number };
+  templates: { total: number; pending_verify: number };
+  withdrawals: { pending: number };
+  revenue_30d: string;
+  daily_signups: { day: string; count: number }[];
+  daily_orders: { day: string; count: number }[];
+};
+
+// ── User types ─────────────────────────────────────────────────────────────
+
+export type AdminUser = {
+  id: number;
+  phone: string;
+  email: string;
+  username: string;
+  first_name: string;
+  last_name: string;
+  role: string;
+  balance: string;
+  template_balance: string;
+  is_active: boolean;
+  is_staff: boolean;
+  is_superuser: boolean;
+  date_joined: string;
+};
+
+// ── Project types ──────────────────────────────────────────────────────────
+
+export type AdminProject = {
+  id: number;
+  name: string;
+  owner: number;
+  owner_phone?: string;
+  is_active: boolean;
+  has_release: boolean;
+  created_at: string;
+};
+
+// ── Template types ─────────────────────────────────────────────────────────
+
+export type AdminTemplate = {
+  id: number;
+  name: string;
+  description?: string;
+  author?: number;
+  author_username?: string;
+  is_verify: boolean;
+  created_at: string;
+};
+
+export type TemplateSubmission = {
+  id: number;
+  template: number;
+  template_name?: string;
+  submitted_by: number;
+  submitted_by_phone?: string;
+  status: "pending" | "approved" | "rejected";
+  note?: string;
+  created_at: string;
+};
+
+// ── Withdrawal types ───────────────────────────────────────────────────────
+
+export type Withdrawal = {
+  id: number;
+  user: number;
+  user_phone?: string;
+  amount: string;
+  status: "pending" | "approved" | "rejected";
+  rejection_reason?: string;
+  note?: string;
+  created_at: string;
+};
+
+// ── Transaction types ──────────────────────────────────────────────────────
+
+export type Transaction = {
+  id: number;
+  user: number;
+  user_phone?: string;
+  type: string;
+  amount: string;
+  description?: string;
+  created_at: string;
+};
+
+// ── Plan types ─────────────────────────────────────────────────────────────
+
+export type Plan = {
+  id: number;
+  name: string;
+  price: string;
+  max_users: number;
+  max_bots: number;
+  max_input_tokens: number;
+  max_output_tokens: number;
+  custom_domain: boolean;
+  priority_support: boolean;
+  description?: string;
+  is_top: boolean;
+  is_active: boolean;
+  order: number;
+  features?: string[];
+};
+
+// ── Audit log types ────────────────────────────────────────────────────────
+
+export type AuditLog = {
+  id: number;
+  actor: number;
+  actor_phone?: string;
+  action: string;
+  target_type?: string;
+  target_id?: number;
+  payload_before?: unknown;
+  payload_after?: unknown;
+  ip_address?: string;
+  note?: string;
+  created_at: string;
+};
+
+// ── Me ─────────────────────────────────────────────────────────────────────
+
+export type MeResponse = {
+  id: number;
+  phone: string;
+  email?: string;
+  username?: string;
+  first_name?: string;
+  last_name?: string;
+  is_staff: boolean;
+  is_superuser: boolean;
+};
+
+// ── AdminAPI namespace ─────────────────────────────────────────────────────
+
+export const AdminAPI = {
+  // Auth
+  async me(): Promise<MeResponse> {
+    const raw = await api<Envelope<MeResponse>>("/api/v1/auth/me/");
+    return unwrap(raw);
+  },
+
+  // Stats
+  async stats(): Promise<DashboardStats> {
+    const raw = await api<Envelope<DashboardStats>>("/api/v1/admin/stats/dashboard/");
+    return unwrap(raw);
+  },
+
+  // Users
+  async users(params?: {
+    search?: string;
+    role?: string;
+    is_active?: string;
+    page?: number;
+  }): Promise<Page<AdminUser>> {
+    const raw = await api<Envelope<Page<AdminUser>>>("/api/v1/admin/users/", {
+      query: params as Record<string, string | number | boolean | undefined | null>,
+    });
+    return unwrap(raw);
+  },
+
+  async user(id: number): Promise<AdminUser> {
+    const raw = await api<Envelope<AdminUser>>(`/api/v1/admin/users/${id}/`);
+    return unwrap(raw);
+  },
+
+  async banUser(
+    id: number,
+    body: { is_active: boolean; note?: string }
+  ): Promise<AdminUser> {
+    const raw = await api<Envelope<AdminUser>>(`/api/v1/admin/users/${id}/ban/`, {
+      method: "PATCH",
+      json: body,
+    });
+    return unwrap(raw);
+  },
+
+  async adjustBalance(
+    id: number,
+    body: { field: "balance" | "template_balance"; value: string; note?: string }
+  ): Promise<AdminUser> {
+    const raw = await api<Envelope<AdminUser>>(`/api/v1/admin/users/${id}/balance/`, {
+      method: "PATCH",
+      json: body,
+    });
+    return unwrap(raw);
+  },
+
+  // Projects
+  async projects(params?: { search?: string; owner?: number; page?: number }): Promise<Page<AdminProject>> {
+    const raw = await api<Envelope<Page<AdminProject>>>("/api/v1/admin/projects/", {
+      query: params as Record<string, string | number | boolean | undefined | null>,
+    });
+    return unwrap(raw);
+  },
+
+  async deleteProject(id: number): Promise<void> {
+    await api<void>(`/api/v1/admin/projects/${id}/`, { method: "DELETE" });
+  },
+
+  // Templates
+  async templates(params?: {
+    search?: string;
+    is_verify?: string;
+    page?: number;
+  }): Promise<Page<AdminTemplate>> {
+    const raw = await api<Envelope<Page<AdminTemplate>>>("/api/v1/admin/templates/", {
+      query: params as Record<string, string | number | boolean | undefined | null>,
+    });
+    return unwrap(raw);
+  },
+
+  async verifyTemplate(
+    id: number,
+    body: { is_verify: boolean; note?: string }
+  ): Promise<AdminTemplate> {
+    const raw = await api<Envelope<AdminTemplate>>(`/api/v1/admin/templates/${id}/verify/`, {
+      method: "PATCH",
+      json: body,
+    });
+    return unwrap(raw);
+  },
+
+  // Template submissions
+  async submissions(params?: { status?: string; page?: number }): Promise<Page<TemplateSubmission>> {
+    const raw = await api<Envelope<Page<TemplateSubmission>>>("/api/v1/admin/template-submissions/", {
+      query: params as Record<string, string | number | boolean | undefined | null>,
+    });
+    return unwrap(raw);
+  },
+
+  async approveSubmission(id: number, body?: { note?: string }): Promise<TemplateSubmission> {
+    const raw = await api<Envelope<TemplateSubmission>>(
+      `/api/v1/admin/template-submissions/${id}/approve/`,
+      { method: "PATCH", json: body ?? {} }
+    );
+    return unwrap(raw);
+  },
+
+  async rejectSubmission(id: number, body?: { note?: string }): Promise<TemplateSubmission> {
+    const raw = await api<Envelope<TemplateSubmission>>(
+      `/api/v1/admin/template-submissions/${id}/reject/`,
+      { method: "PATCH", json: body ?? {} }
+    );
+    return unwrap(raw);
+  },
+
+  // Withdrawals
+  async withdrawals(params?: { status?: string; page?: number }): Promise<Page<Withdrawal>> {
+    const raw = await api<Envelope<Page<Withdrawal>>>("/api/v1/admin/withdrawals/", {
+      query: params as Record<string, string | number | boolean | undefined | null>,
+    });
+    return unwrap(raw);
+  },
+
+  async approveWithdrawal(id: number, body?: { note?: string }): Promise<Withdrawal> {
+    const raw = await api<Envelope<Withdrawal>>(`/api/v1/admin/withdrawals/${id}/approve/`, {
+      method: "PATCH",
+      json: body ?? {},
+    });
+    return unwrap(raw);
+  },
+
+  async rejectWithdrawal(id: number, body: { rejection_reason: string }): Promise<Withdrawal> {
+    const raw = await api<Envelope<Withdrawal>>(`/api/v1/admin/withdrawals/${id}/reject/`, {
+      method: "PATCH",
+      json: body,
+    });
+    return unwrap(raw);
+  },
+
+  // Transactions
+  async transactions(params?: { page?: number }): Promise<Page<Transaction>> {
+    const raw = await api<Envelope<Page<Transaction>>>("/api/v1/admin/transactions/", {
+      query: params as Record<string, string | number | boolean | undefined | null>,
+    });
+    return unwrap(raw);
+  },
+
+  // Plans
+  async plans(): Promise<Plan[]> {
+    const raw = await api<Envelope<Plan[]>>("/api/v1/admin/plans/");
+    return unwrap(raw);
+  },
+
+  async createPlan(body: Omit<Plan, "id">): Promise<Plan> {
+    const raw = await api<Envelope<Plan>>("/api/v1/admin/plans/", {
+      method: "POST",
+      json: body,
+    });
+    return unwrap(raw);
+  },
+
+  async updatePlan(id: number, body: Partial<Omit<Plan, "id">>): Promise<Plan> {
+    const raw = await api<Envelope<Plan>>(`/api/v1/admin/plans/${id}/`, {
+      method: "PATCH",
+      json: body,
+    });
+    return unwrap(raw);
+  },
+
+  async deletePlan(id: number): Promise<void> {
+    await api<void>(`/api/v1/admin/plans/${id}/`, { method: "DELETE" });
+  },
+
+  // Tickets (placeholder)
+  async tickets(): Promise<{ results: unknown[]; count: number; detail?: string }> {
+    return api("/api/v1/admin/tickets/");
+  },
+
+  // Audit log
+  async auditLog(params?: {
+    action?: string;
+    target_type?: string;
+    target_id?: number;
+    actor?: number;
+    page?: number;
+  }): Promise<Page<AuditLog>> {
+    const raw = await api<Envelope<Page<AuditLog>>>("/api/v1/admin/audit-log/", {
+      query: params as Record<string, string | number | boolean | undefined | null>,
+    });
+    return unwrap(raw);
+  },
+};
