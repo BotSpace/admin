@@ -15,10 +15,11 @@ export async function verifyTemplateAction(id: number, is_verify: boolean, note?
 
 export async function updateTemplateAction(
   id: number,
-  body: Partial<Pick<AdminTemplateDetail, "name" | "short_description" | "description" | "original_price" | "discount" | "discount_type" | "is_verify" | "demo_url">>
+  body: Partial<Pick<AdminTemplateDetail, "name" | "short_description" | "description" | "original_price" | "discount" | "discount_type" | "is_verify" | "demo_url">>,
+  image?: File
 ) {
   try {
-    await AdminAPI.updateTemplate(id, body);
+    await AdminAPI.updateTemplate(id, body, image);
     revalidatePath(`/templates/${id}`);
     revalidatePath("/templates");
     return { ok: true };

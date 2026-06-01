@@ -490,8 +490,21 @@ export const AdminAPI = {
 
   async updateTemplate(
     id: number,
-    body: Partial<Pick<AdminTemplateDetail, "name" | "short_description" | "description" | "original_price" | "discount" | "discount_type" | "is_verify" | "demo_url">>
+    body: Partial<Pick<AdminTemplateDetail, "name" | "short_description" | "description" | "original_price" | "discount" | "discount_type" | "is_verify" | "demo_url">>,
+    image?: File | Blob
   ): Promise<AdminTemplateDetail> {
+    if (image) {
+      const fd = new FormData();
+      fd.append("image", image);
+      for (const [k, v] of Object.entries(body)) {
+        if (v !== undefined && v !== null) fd.append(k, String(v));
+      }
+      const raw = await api<Envelope<AdminTemplateDetail>>(`/api/v1/admin/templates/${id}/`, {
+        method: "PATCH",
+        body: fd,
+      });
+      return unwrap(raw);
+    }
     const raw = await api<Envelope<AdminTemplateDetail>>(`/api/v1/admin/templates/${id}/`, {
       method: "PATCH",
       json: body,

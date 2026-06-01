@@ -1,5 +1,6 @@
 "use client";
-import { useState } from "react";
+import { useRef, useState } from "react";
+import Image from "next/image";
 import { toast } from "sonner";
 import {
   Dialog,
@@ -17,7 +18,9 @@ import { Switch } from "@/shared/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/components/ui/select";
 import { type AdminTemplateDetail } from "@/shared/api/services";
 import { updateTemplateAction } from "./actions";
-import { Pencil } from "lucide-react";
+import { Pencil, ImagePlus, X } from "lucide-react";
+
+const MAX_IMAGE_SIZE = 5 * 1024 * 1024; // 5 MB
 
 type FormState = {
   name: string;
@@ -47,9 +50,37 @@ export function TemplateEditDialog({ template }: { template: AdminTemplateDetail
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState<FormState>(templateToForm(template));
   const [loading, setLoading] = useState(false);
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   function set<K extends keyof FormState>(key: K, value: FormState[K]) {
     setForm((prev) => ({ ...prev, [key]: value }));
+  }
+
+  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      toast.error("Faqat rasm fayllari qabul qilinadi");
+      return;
+    }
+    if (file.size > MAX_IMAGE_SIZE) {
+      toast.warning("Rasm hajmi 5 MB dan oshmasligi kerak");
+    }
+    setImageFile(file);
+    const prev = imagePreview;
+    if (prev) URL.revokeObjectURL(prev);
+    setImagePreview(URL.createObjectURL(file));
+  }
+
+  function handleRemoveImage() {
+    setImageFile(null);
+    if (imagePreview) {
+      URL.revokeObjectURL(imagePreview);
+      setImagePreview(null);
+    }
+    if (fileInputRef.current) fileInputRef.current.value = "";
   }
 
   async function handle() {
@@ -58,16 +89,20 @@ export function TemplateEditDialog({ template }: { template: AdminTemplateDetail
       return;
     }
     setLoading(true);
-    const res = await updateTemplateAction(template.id, {
-      name: form.name.trim(),
-      short_description: form.short_description.trim() || undefined,
-      description: form.description.trim() || undefined,
-      original_price: form.original_price.trim() || undefined,
-      discount: form.discount.trim() || undefined,
-      discount_type: form.discount_type || undefined,
-      demo_url: form.demo_url.trim() || undefined,
-      is_verify: form.is_verify,
-    });
+    const res = await updateTemplateAction(
+      template.id,
+      {
+        name: form.name.trim(),
+        short_description: form.short_description.trim() || undefined,
+        description: form.description.trim() || undefined,
+        original_price: form.original_price.trim() || undefined,
+        discount: form.discount.trim() || undefined,
+        discount_type: form.discount_type || undefined,
+        demo_url: form.demo_url.trim() || undefined,
+        is_verify: form.is_verify,
+      },
+      imageFile ?? undefined
+    );
     setLoading(false);
     if (res.ok) {
       toast.success("Shablon yangilandi");
@@ -90,6 +125,61 @@ export function TemplateEditDialog({ template }: { template: AdminTemplateDetail
           <DialogTitle>Shablonni tahrirlash</DialogTitle>
         </DialogHeader>
         <div className="space-y-4 py-2">
+          {/* Image section */}
+          <div className="space-y-1.5">
+            <Label>Rasm</Label>
+            {(imagePreview ?? template.image) ? (
+              <div className="relative w-full h-40 rounded-md overflow-hidden border bg-muted">
+                <Image
+                  src={imagePreview ?? template.image!}
+                  alt="Shablon rasmi"
+                  fill
+                  className="object-cover"
+                  unoptimized
+                />
+                <button
+                  type="button"
+                  onClick={handleRemoveImage}
+                  className="absolute top-1.5 right-1.5 rounded-full bg-background/80 p-1 hover:bg-background transition-colors"
+                  title="Rasmni olib tashlash"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              </div>
+            ) : (
+              <div
+                role="button"
+                tabIndex={0}
+                onClick={() => fileInputRef.current?.click()}
+                onKeyDown={(e) => e.key === "Enter" && fileInputRef.current?.click()}
+                className="flex flex-col items-center justify-center w-full h-32 rounded-md border border-dashed bg-muted/40 hover:bg-muted/60 transition-colors cursor-pointer gap-2 text-muted-foreground text-sm"
+              >
+                <ImagePlus className="h-6 w-6" />
+                <span>Rasm tanlash</span>
+              </div>
+            )}
+            <input
+              ref={fileInputRef}
+              id="tpl-image"
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={handleFileChange}
+            />
+            {!imagePreview && (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="w-full mt-1"
+                onClick={() => fileInputRef.current?.click()}
+              >
+                <ImagePlus className="h-4 w-4 mr-1.5" />
+                {template.image ? "Rasmni almashtirish" : "Rasm yuklash"}
+              </Button>
+            )}
+          </div>
+
           <div className="space-y-1.5">
             <Label htmlFor="tpl-name">Nomi</Label>
             <Input
