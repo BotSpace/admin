@@ -10,6 +10,7 @@ import {
   CardTitle,
 } from "@/shared/components/ui/card";
 import { VerifyToggle } from "@/features/templates/verify-toggle";
+import { TemplateEditDialog } from "@/features/templates/template-edit-dialog";
 import { format } from "date-fns";
 import { ChevronLeft, ExternalLink } from "lucide-react";
 import { formatCurrency } from "@/shared/lib/utils";
@@ -76,6 +77,7 @@ export default async function TemplateDetailPage({
           <Badge variant={template.is_verify ? "success" : "warn"}>
             {template.is_verify ? "Tasdiqlangan" : "Kutilmoqda"}
           </Badge>
+          <TemplateEditDialog template={template} />
           <VerifyToggle id={template.id} isVerify={template.is_verify} name={template.name} />
         </div>
       </div>
