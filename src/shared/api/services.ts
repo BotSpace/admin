@@ -319,6 +319,16 @@ export type AuditLog = {
   created_at: string;
 };
 
+// ── Platform config types ──────────────────────────────────────────────────
+
+export type PlatformConfig = {
+  key: string;
+  value: string;
+  label: string;
+  group: string;
+  is_public: boolean;
+};
+
 // ── Me ─────────────────────────────────────────────────────────────────────
 
 export type MeResponse = {
@@ -583,6 +593,20 @@ export const AdminAPI = {
     if (raw && typeof raw === "object" && "results" in raw && Array.isArray(raw.results))
       return raw.results;
     return [];
+  },
+
+  // Platform config
+  async configs(): Promise<PlatformConfig[]> {
+    const raw = await api<Envelope<PlatformConfig[]>>("/api/v1/shared/config/");
+    return unwrap(raw);
+  },
+
+  async updateConfig(key: string, value: string): Promise<PlatformConfig> {
+    const raw = await api<Envelope<PlatformConfig>>(`/api/v1/shared/config/${key}/`, {
+      method: "PATCH",
+      json: { value },
+    });
+    return unwrap(raw);
   },
 
   // Audit log

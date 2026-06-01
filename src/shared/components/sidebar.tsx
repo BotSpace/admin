@@ -16,6 +16,7 @@ import {
   ChevronRight,
   ShieldCheck,
   Megaphone,
+  Settings2,
 } from "lucide-react";
 import { cn } from "@/shared/lib/utils";
 import { useState } from "react";
@@ -80,6 +81,13 @@ const NAV: NavItem[] = [
     label: "Audit log",
     href: "/audit-log",
     icon: <ScrollText className="h-4 w-4" />,
+  },
+  {
+    label: "Sozlamalar",
+    icon: <Settings2 className="h-4 w-4" />,
+    children: [
+      { label: "AI Agent", href: "/settings/ai" },
+    ],
   },
 ];
 
