@@ -5,7 +5,16 @@ import { SubmissionActions } from "@/features/templates/submission-actions";
 import { SubmissionsFilter } from "@/features/templates/submissions-filter";
 import { format } from "date-fns";
 
-type SearchParams = { status?: string; page?: string };
+type SearchParams = {
+  status?: string;
+  search?: string;
+  price_min?: string;
+  price_max?: string;
+  created_after?: string;
+  created_before?: string;
+  ordering?: string;
+  page?: string;
+};
 
 export default async function SubmissionsPage({ searchParams }: { searchParams: Promise<SearchParams> }) {
   const sp = await searchParams;
@@ -13,7 +22,16 @@ export default async function SubmissionsPage({ searchParams }: { searchParams: 
 
   let result;
   try {
-    result = await AdminAPI.submissions({ status: sp.status, page });
+    result = await AdminAPI.submissions({
+      status: sp.status,
+      search: sp.search,
+      price_min: sp.price_min,
+      price_max: sp.price_max,
+      created_after: sp.created_after,
+      created_before: sp.created_before,
+      ordering: sp.ordering,
+      page,
+    });
   } catch {
     result = null;
   }
@@ -21,6 +39,12 @@ export default async function SubmissionsPage({ searchParams }: { searchParams: 
   const buildPageHref = (p: number) => {
     const params = new URLSearchParams();
     if (sp.status) params.set("status", sp.status);
+    if (sp.search) params.set("search", sp.search);
+    if (sp.price_min) params.set("price_min", sp.price_min);
+    if (sp.price_max) params.set("price_max", sp.price_max);
+    if (sp.created_after) params.set("created_after", sp.created_after);
+    if (sp.created_before) params.set("created_before", sp.created_before);
+    if (sp.ordering) params.set("ordering", sp.ordering);
     params.set("page", String(p));
     return `/templates/submissions?${params.toString()}`;
   };
@@ -44,7 +68,15 @@ export default async function SubmissionsPage({ searchParams }: { searchParams: 
         <p className="text-muted-foreground text-sm">{result ? `Jami: ${result.total_items}` : ""}</p>
       </div>
 
-      <SubmissionsFilter defaultStatus={sp.status} />
+      <SubmissionsFilter
+        defaultSearch={sp.search}
+        defaultStatus={sp.status}
+        defaultPriceMin={sp.price_min}
+        defaultPriceMax={sp.price_max}
+        defaultCreatedAfter={sp.created_after}
+        defaultCreatedBefore={sp.created_before}
+        defaultOrdering={sp.ordering}
+      />
 
       {result === null ? (
         <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive">
