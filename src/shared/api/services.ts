@@ -338,6 +338,20 @@ export type PlatformConfig = {
   is_public: boolean;
 };
 
+// ── General settings types (shared app SettingsModel / OptionsModel) ───────
+
+export type SettingOption = {
+  key: string;
+  value: string[];
+};
+
+export type SettingGroup = {
+  key: string;
+  description: string;
+  is_public: boolean;
+  options: SettingOption[];
+};
+
 // ── Me ─────────────────────────────────────────────────────────────────────
 
 export type MeResponse = {
@@ -678,5 +692,27 @@ export const AdminAPI = {
       query: params as Record<string, string | number | boolean | undefined | null>,
     });
     return unwrap(raw);
+  },
+
+  // General settings (shared app SettingsModel / OptionsModel)
+  async getSettings(): Promise<SettingGroup[]> {
+    type RawEnvelope = { status: unknown; data: SettingGroup[] | { results?: SettingGroup[] } };
+    const raw = await api<RawEnvelope>("/api/v1/admin/settings/");
+    const data = raw.data;
+    if (Array.isArray(data)) return data;
+    if (data && typeof data === "object" && "results" in data && Array.isArray(data.results))
+      return data.results;
+    return [];
+  },
+
+  async setSetting(
+    settings_key: string,
+    option_key: string,
+    value: string[]
+  ): Promise<void> {
+    await api<unknown>("/api/v1/admin/settings/set/", {
+      method: "POST",
+      json: { settings_key, option_key, value },
+    });
   },
 };
