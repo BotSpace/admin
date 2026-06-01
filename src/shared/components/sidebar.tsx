@@ -86,6 +86,7 @@ const NAV: NavItem[] = [
     label: "Sozlamalar",
     icon: <Settings2 className="h-4 w-4" />,
     children: [
+      { label: "Umumiy sozlamalar", href: "/settings/general" },
       { label: "AI Agent", href: "/settings/ai" },
     ],
   },
