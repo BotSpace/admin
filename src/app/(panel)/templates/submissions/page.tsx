@@ -59,8 +59,25 @@ export default async function SubmissionsPage({ searchParams }: { searchParams: 
           emptyMessage="So'rovlar topilmadi"
           columns={[
             { key: "id", header: "ID", cell: (s) => <span className="font-mono text-xs">#{s.id}</span> },
-            { key: "template", header: "Shablon", cell: (s) => s.template_name ?? `#${s.template}` },
-            { key: "user", header: "Foydalanuvchi", cell: (s) => s.submitted_by_phone ?? `#${s.submitted_by}` },
+            {
+              key: "template",
+              header: "Shablon",
+              cell: (s) => (
+                <a href={`/templates/submissions/${s.id}`} className="hover:underline font-medium">
+                  {s.name || s.template_name || "—"}
+                </a>
+              ),
+            },
+            {
+              key: "user",
+              header: "Foydalanuvchi",
+              cell: (s) => s.user_phone || s.submitted_by_phone || "—",
+            },
+            {
+              key: "project",
+              header: "Loyiha",
+              cell: (s) => s.project_name || "—",
+            },
             {
               key: "status",
               header: "Holat",
