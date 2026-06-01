@@ -597,8 +597,20 @@ export const AdminAPI = {
 
   // Platform config
   async configs(): Promise<PlatformConfig[]> {
-    const raw = await api<Envelope<PlatformConfig[]>>("/api/v1/shared/config/");
-    return unwrap(raw);
+    const raw = await api<Envelope<unknown>>("/api/v1/shared/config/");
+    const data = unwrap(raw);
+    // Normalize: the list may come back as a bare array, a paginated
+    // { results: [...] } object, or a flat { key: value } dict — always
+    // return PlatformConfig[] so callers can safely .find()/.map().
+    if (Array.isArray(data)) return data as PlatformConfig[];
+    const results = (data as { results?: unknown })?.results;
+    if (Array.isArray(results)) return results as PlatformConfig[];
+    if (data && typeof data === "object") {
+      return Object.entries(data as Record<string, unknown>).map(
+        ([key, value]) => ({ key, value, label: key, group: "", is_public: true }) as PlatformConfig,
+      );
+    }
+    return [];
   },
 
   async updateConfig(key: string, value: string): Promise<PlatformConfig> {
