@@ -218,12 +218,21 @@ export type TemplateCategory = {
 export type TemplateSubmission = {
   id: number;
   template: number;
+  // list fields (new contract)
+  name?: string;
+  user_phone?: string;
+  project_name?: string;
+  // legacy detail fields kept for backward compat
   template_name?: string;
-  submitted_by: number;
+  submitted_by?: number;
   submitted_by_phone?: string;
+  description?: string;
+  categories?: { id: number; name: string }[];
+  features?: { id: number; name: string }[];
   status: "pending" | "approved" | "rejected";
   note?: string;
   created_at: string;
+  updated_at?: string;
 };
 
 // ── Withdrawal types ───────────────────────────────────────────────────────
@@ -465,6 +474,17 @@ export const AdminAPI = {
     return unwrap(raw);
   },
 
+  async updateTemplate(
+    id: number,
+    body: Partial<Pick<AdminTemplateDetail, "name" | "short_description" | "description" | "original_price" | "discount" | "discount_type" | "is_verify" | "demo_url">>
+  ): Promise<AdminTemplateDetail> {
+    const raw = await api<Envelope<AdminTemplateDetail>>(`/api/v1/admin/templates/${id}/`, {
+      method: "PATCH",
+      json: body,
+    });
+    return unwrap(raw);
+  },
+
   async templateCategories(): Promise<TemplateCategory[]> {
     type CatEnvelope = { status: boolean; data: { results: TemplateCategory[] } | TemplateCategory[] };
     const raw = await apiFetch<CatEnvelope>("/api/v1/template/category/");
@@ -494,6 +514,22 @@ export const AdminAPI = {
     const raw = await api<Envelope<TemplateSubmission>>(
       `/api/v1/admin/template-submissions/${id}/reject/`,
       { method: "PATCH", json: body ?? {} }
+    );
+    return unwrap(raw);
+  },
+
+  async submission(id: number): Promise<TemplateSubmission> {
+    const raw = await api<Envelope<TemplateSubmission>>(`/api/v1/admin/template-submissions/${id}/`);
+    return unwrap(raw);
+  },
+
+  async updateSubmission(
+    id: number,
+    body: Partial<Pick<TemplateSubmission, "name" | "description" | "status" | "note"> & { categories?: number[]; features?: number[] }>
+  ): Promise<TemplateSubmission> {
+    const raw = await api<Envelope<TemplateSubmission>>(
+      `/api/v1/admin/template-submissions/${id}/`,
+      { method: "PATCH", json: body }
     );
     return unwrap(raw);
   },
