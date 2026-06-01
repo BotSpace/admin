@@ -495,7 +495,16 @@ export const AdminAPI = {
   },
 
   // Template submissions
-  async submissions(params?: { status?: string; page?: number }): Promise<Page<TemplateSubmission>> {
+  async submissions(params?: {
+    status?: string;
+    search?: string;
+    price_min?: string;
+    price_max?: string;
+    created_after?: string;
+    created_before?: string;
+    ordering?: string;
+    page?: number;
+  }): Promise<Page<TemplateSubmission>> {
     const raw = await api<Envelope<Page<TemplateSubmission>>>("/api/v1/admin/template-submissions/", {
       query: params as Record<string, string | number | boolean | undefined | null>,
     });
