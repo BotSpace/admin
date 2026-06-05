@@ -11,7 +11,7 @@ import {
 import { SubmissionActions } from "@/features/templates/submission-actions";
 import { SubmissionEditDialog } from "@/features/templates/submission-edit-dialog";
 import { format } from "date-fns";
-import { ChevronLeft } from "lucide-react";
+import { ChevronLeft, KeyRound } from "lucide-react";
 
 function formatDate(value: string | null | undefined): string {
   if (!value) return "—";
@@ -169,6 +169,32 @@ export default async function SubmissionDetailPage({
                 </div>
               </div>
             )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Kerakli env o'zgaruvchilar */}
+      {(submission.required_envs?.length ?? 0) > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-sm font-semibold">
+              <KeyRound className="h-4 w-4" />
+              Kerakli sozlamalar (required_envs)
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ul className="space-y-3">
+              {(submission.required_envs ?? []).map((env) => (
+                <li key={env.key} className="flex flex-col gap-1">
+                  <code className="text-sm font-mono bg-muted px-2 py-1 rounded self-start border border-border/50">
+                    {env.key}
+                  </code>
+                  {env.description && (
+                    <p className="text-xs text-muted-foreground">{env.description}</p>
+                  )}
+                </li>
+              ))}
+            </ul>
           </CardContent>
         </Card>
       )}
