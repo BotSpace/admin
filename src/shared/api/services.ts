@@ -206,6 +206,7 @@ export type AdminTemplateDetail = {
   orders_total: number;
   orders_confirmed: number;
   node_count?: number;
+  required_envs?: { key: string; description?: string }[];
   created_at: string;
   updated_at?: string;
 };
@@ -229,6 +230,7 @@ export type TemplateSubmission = {
   description?: string;
   categories?: { id: number; name: string }[];
   features?: { id: number; name: string }[];
+  required_envs?: { key: string; description?: string }[];
   status: "pending" | "approved" | "rejected";
   note?: string;
   created_at: string;
