@@ -78,11 +78,10 @@ export default async function BotWithdrawalsPage({ searchParams }: { searchParam
               key: "card",
               header: "Karta",
               cell: (w) => (
-                <span className="font-mono text-xs text-muted-foreground">
-                  {w.card_number}
-                  <br />
-                  {w.card_owner}
-                </span>
+                <div className="text-xs text-muted-foreground">
+                  <span className="block whitespace-nowrap font-mono">{w.card_number}</span>
+                  <span className="block whitespace-nowrap">{w.card_owner}</span>
+                </div>
               ),
             },
             {

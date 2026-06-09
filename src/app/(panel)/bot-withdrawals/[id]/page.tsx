@@ -61,8 +61,8 @@ export default async function BotWithdrawalDetailPage({ params }: { params: Prom
           <Row label="Foydalanuvchi" value={w.user_phone ?? `#${w.user}`} />
           <Row label="Bot" value={w.project_name ?? "—"} />
           <Row label="Miqdor" value={<span className="font-mono">{w.amount} so&apos;m</span>} />
-          <Row label="Karta raqami" value={<span className="font-mono">{w.card_number}</span>} />
-          <Row label="Karta egasi" value={w.card_owner} />
+          <Row label="Karta raqami" value={<span className="whitespace-nowrap font-mono">{w.card_number}</span>} />
+          <Row label="Karta egasi" value={<span className="whitespace-nowrap">{w.card_owner}</span>} />
           <Row label="Sana" value={fmtDate(w.created_at)} />
           {w.status === "rejected" && w.rejection_reason && (
             <Row label="Rad etish sababi" value={<span className="text-destructive">{w.rejection_reason}</span>} />
