@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { AdminAPI } from "@/shared/api/services";
 import { DataTable } from "@/shared/components/data-table";
 import { Badge } from "@/shared/components/ui/badge";
@@ -57,16 +56,9 @@ export default async function BotWithdrawalsPage({ searchParams }: { searchParam
           totalPages={result.total_pages}
           buildPageHref={buildPageHref}
           emptyMessage="So'rovlar topilmadi"
+          rowHref={(w) => `/bot-withdrawals/${w.id}`}
           columns={[
-            {
-              key: "id",
-              header: "ID",
-              cell: (w) => (
-                <Link href={`/bot-withdrawals/${w.id}`} className="font-mono text-xs text-primary hover:underline">
-                  #{w.id}
-                </Link>
-              ),
-            },
+            { key: "id", header: "ID", cell: (w) => <span className="font-mono text-xs">#{w.id}</span> },
             { key: "user", header: "Foydalanuvchi", cell: (w) => w.user_phone ?? `#${w.user}` },
             { key: "bot", header: "Bot", cell: (w) => w.project_name ?? "—" },
             {
@@ -96,15 +88,6 @@ export default async function BotWithdrawalsPage({ searchParams }: { searchParam
                 <span className="text-xs text-muted-foreground">
                   {format(new Date(w.created_at), "dd.MM.yyyy HH:mm")}
                 </span>
-              ),
-            },
-            {
-              key: "view",
-              header: "",
-              cell: (w) => (
-                <Link href={`/bot-withdrawals/${w.id}`} className="text-xs text-primary hover:underline">
-                  Ko&apos;rish →
-                </Link>
               ),
             },
           ]}

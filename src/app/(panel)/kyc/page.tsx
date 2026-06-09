@@ -63,7 +63,6 @@ export default async function KycPage({ searchParams }: { searchParams: Promise<
                       {v.user_phone ?? `#${v.user}`} · {format(new Date(v.created_at), "dd.MM.yyyy HH:mm")}
                     </p>
                   </div>
-                  <span className="shrink-0 text-xs text-primary">Ko&apos;rish →</span>
                 </Link>
               </li>
             ))}

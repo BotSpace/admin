@@ -24,6 +24,8 @@ type Props<T> = {
   totalPages: number;
   buildPageHref: (page: number) => string;
   emptyMessage?: string;
+  /** Agar berilsa — butun qator bosiladigan bo'ladi (detail sahifaga link). */
+  rowHref?: (row: T) => string;
 };
 
 export function DataTable<T>({
@@ -33,6 +35,7 @@ export function DataTable<T>({
   totalPages,
   buildPageHref,
   emptyMessage = "Ma'lumot yo'q",
+  rowHref,
 }: Props<T>) {
   return (
     <div className="space-y-4">
@@ -58,15 +61,21 @@ export function DataTable<T>({
                 </TableCell>
               </TableRow>
             ) : (
-              data.map((row, i) => (
-                <TableRow key={i}>
-                  {columns.map((col) => (
-                    <TableCell key={col.key} className={col.className}>
-                      {col.cell(row)}
-                    </TableCell>
-                  ))}
-                </TableRow>
-              ))
+              data.map((row, i) => {
+                const href = rowHref?.(row);
+                return (
+                  <TableRow key={i} className={href ? "relative cursor-pointer hover:bg-muted/40" : undefined}>
+                    {columns.map((col, ci) => (
+                      <TableCell key={col.key} className={col.className}>
+                        {ci === 0 && href && (
+                          <Link href={href} aria-label="Ko'rish" className="absolute inset-0" />
+                        )}
+                        {col.cell(row)}
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                );
+              })
             )}
           </TableBody>
         </Table>
