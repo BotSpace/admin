@@ -250,6 +250,37 @@ export type Withdrawal = {
   created_at: string;
 };
 
+// ── Bot earnings withdrawal types ──────────────────────────────────────────
+
+export type BotWithdrawal = {
+  id: number;
+  user: number;
+  user_phone?: string;
+  project: number | null;
+  project_name?: string | null;
+  amount: string;
+  card_number: string;
+  card_owner: string;
+  status: "pending" | "approved" | "rejected";
+  rejection_reason?: string | null;
+  created_at: string;
+};
+
+// ── KYC verification types ─────────────────────────────────────────────────
+
+export type KycVerification = {
+  id: number;
+  user: number;
+  user_phone?: string;
+  full_name: string;
+  passport_image: string;
+  selfie_image: string;
+  residence_reference: string;
+  status: "pending" | "approved" | "rejected";
+  rejection_reason?: string | null;
+  created_at: string;
+};
+
 // ── Transaction types ──────────────────────────────────────────────────────
 
 export type Transaction = {
@@ -729,5 +760,53 @@ export const AdminAPI = {
       method: "POST",
       json: { settings_key, option_key, value },
     });
+  },
+
+  // Bot earnings withdrawals
+  async botWithdrawals(params?: { status?: string; page?: number }): Promise<Page<BotWithdrawal>> {
+    const raw = await api<Envelope<Page<BotWithdrawal>>>("/api/v1/admin/bot-withdrawals/", {
+      query: params as Record<string, string | number | boolean | undefined | null>,
+    });
+    return unwrap(raw);
+  },
+
+  async approveBotWithdrawal(id: number, body?: { note?: string }): Promise<BotWithdrawal> {
+    const raw = await api<Envelope<BotWithdrawal>>(`/api/v1/admin/bot-withdrawals/${id}/approve/`, {
+      method: "PATCH",
+      json: body ?? {},
+    });
+    return unwrap(raw);
+  },
+
+  async rejectBotWithdrawal(id: number, body: { rejection_reason: string }): Promise<BotWithdrawal> {
+    const raw = await api<Envelope<BotWithdrawal>>(`/api/v1/admin/bot-withdrawals/${id}/reject/`, {
+      method: "PATCH",
+      json: body,
+    });
+    return unwrap(raw);
+  },
+
+  // KYC verifications
+  async kycVerifications(params?: { status?: string; page?: number }): Promise<Page<KycVerification>> {
+    const raw = await api<Envelope<Page<KycVerification>>>("/api/v1/admin/kyc-verifications/", {
+      query: params as Record<string, string | number | boolean | undefined | null>,
+    });
+    return unwrap(raw);
+  },
+
+  async approveKyc(id: number, body?: { note?: string }): Promise<KycVerification> {
+    const raw = await api<Envelope<KycVerification>>(`/api/v1/admin/kyc-verifications/${id}/approve/`, {
+      method: "PATCH",
+      json: body ?? {},
+    });
+    return unwrap(raw);
+  },
+
+  async rejectKyc(id: number, body: { rejection_reason: string }): Promise<KycVerification> {
+    const raw = await api<Envelope<KycVerification>>(`/api/v1/admin/kyc-verifications/${id}/reject/`, {
+      method: "PATCH",
+      json: body,
+    });
+    return unwrap(raw);
   },
 };

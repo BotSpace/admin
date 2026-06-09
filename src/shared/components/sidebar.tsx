@@ -8,6 +8,7 @@ import {
   LayoutTemplate,
   CheckSquare,
   Wallet,
+  Banknote,
   ArrowLeftRight,
   CreditCard,
   Ticket,
@@ -56,6 +57,16 @@ const NAV: NavItem[] = [
     label: "Yechib olishlar",
     href: "/withdrawals",
     icon: <Wallet className="h-4 w-4" />,
+  },
+  {
+    label: "Bot yechishlari",
+    href: "/bot-withdrawals",
+    icon: <Banknote className="h-4 w-4" />,
+  },
+  {
+    label: "Verifikatsiyalar",
+    href: "/kyc",
+    icon: <ShieldCheck className="h-4 w-4" />,
   },
   {
     label: "Tranzaksiyalar",
