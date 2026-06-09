@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { ConfirmDialog } from "@/shared/components/confirm-dialog";
 import { Button } from "@/shared/components/ui/button";
@@ -17,10 +18,13 @@ import { CheckCircle, XCircle } from "lucide-react";
 import { approveBotWithdrawalAction, rejectBotWithdrawalAction } from "./actions";
 
 export function BotWithdrawalActions({ id }: { id: number }) {
+  const router = useRouter();
   async function handleApprove() {
     const res = await approveBotWithdrawalAction(id);
-    if (res.ok) toast.success("Pul yechish tasdiqlandi");
-    else toast.error(res.message);
+    if (res.ok) {
+      toast.success("Pul yechish tasdiqlandi");
+      router.push("/bot-withdrawals");
+    } else toast.error(res.message);
   }
 
   return (
@@ -43,6 +47,7 @@ export function BotWithdrawalActions({ id }: { id: number }) {
 }
 
 function RejectDialog({ id }: { id: number }) {
+  const router = useRouter();
   const [open, setOpen] = useState(false);
   const [reason, setReason] = useState("");
   const [loading, setLoading] = useState(false);
@@ -59,6 +64,7 @@ function RejectDialog({ id }: { id: number }) {
       toast.success("Pul yechish rad etildi");
       setOpen(false);
       setReason("");
+      router.push("/bot-withdrawals");
     } else {
       toast.error(res.message);
     }

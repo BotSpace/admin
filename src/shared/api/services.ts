@@ -770,6 +770,11 @@ export const AdminAPI = {
     return unwrap(raw);
   },
 
+  async botWithdrawal(id: number): Promise<BotWithdrawal> {
+    const raw = await api<Envelope<BotWithdrawal>>(`/api/v1/admin/bot-withdrawals/${id}/`);
+    return unwrap(raw);
+  },
+
   async approveBotWithdrawal(id: number, body?: { note?: string }): Promise<BotWithdrawal> {
     const raw = await api<Envelope<BotWithdrawal>>(`/api/v1/admin/bot-withdrawals/${id}/approve/`, {
       method: "PATCH",
@@ -791,6 +796,11 @@ export const AdminAPI = {
     const raw = await api<Envelope<Page<KycVerification>>>("/api/v1/admin/kyc-verifications/", {
       query: params as Record<string, string | number | boolean | undefined | null>,
     });
+    return unwrap(raw);
+  },
+
+  async kycVerification(id: number): Promise<KycVerification> {
+    const raw = await api<Envelope<KycVerification>>(`/api/v1/admin/kyc-verifications/${id}/`);
     return unwrap(raw);
   },
 

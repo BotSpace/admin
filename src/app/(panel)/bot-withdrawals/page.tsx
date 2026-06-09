@@ -1,7 +1,7 @@
+import Link from "next/link";
 import { AdminAPI } from "@/shared/api/services";
 import { DataTable } from "@/shared/components/data-table";
 import { Badge } from "@/shared/components/ui/badge";
-import { BotWithdrawalActions } from "@/features/bot-withdrawals/bot-withdrawal-actions";
 import { WithdrawalsFilter } from "@/features/withdrawals/withdrawals-filter";
 import { format } from "date-fns";
 
@@ -58,7 +58,15 @@ export default async function BotWithdrawalsPage({ searchParams }: { searchParam
           buildPageHref={buildPageHref}
           emptyMessage="So'rovlar topilmadi"
           columns={[
-            { key: "id", header: "ID", cell: (w) => <span className="font-mono text-xs">#{w.id}</span> },
+            {
+              key: "id",
+              header: "ID",
+              cell: (w) => (
+                <Link href={`/bot-withdrawals/${w.id}`} className="font-mono text-xs text-primary hover:underline">
+                  #{w.id}
+                </Link>
+              ),
+            },
             { key: "user", header: "Foydalanuvchi", cell: (w) => w.user_phone ?? `#${w.user}` },
             { key: "bot", header: "Bot", cell: (w) => w.project_name ?? "—" },
             {
@@ -92,9 +100,13 @@ export default async function BotWithdrawalsPage({ searchParams }: { searchParam
               ),
             },
             {
-              key: "actions",
+              key: "view",
               header: "",
-              cell: (w) => (w.status === "pending" ? <BotWithdrawalActions id={w.id} /> : null),
+              cell: (w) => (
+                <Link href={`/bot-withdrawals/${w.id}`} className="text-xs text-primary hover:underline">
+                  Ko&apos;rish →
+                </Link>
+              ),
             },
           ]}
         />
