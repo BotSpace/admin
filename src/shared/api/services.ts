@@ -281,6 +281,27 @@ export type KycVerification = {
   created_at: string;
 };
 
+// ── Support ticket types ─────────────────────────────────────────────────────
+
+export type AdminTicketMessage = {
+  id: number;
+  sender: "user" | "admin";
+  message: string;
+  attachment?: string | null;
+  created_at: string;
+};
+
+export type AdminTicket = {
+  id: number;
+  user: number;
+  user_phone?: string;
+  subject: string;
+  status: "open" | "pending" | "closed";
+  created_at: string;
+  updated_at?: string;
+  messages?: AdminTicketMessage[];
+};
+
 // ── Transaction types ──────────────────────────────────────────────────────
 
 export type Transaction = {
@@ -676,9 +697,33 @@ export const AdminAPI = {
     await api<void>(`/api/v1/admin/plans/${id}/`, { method: "DELETE" });
   },
 
-  // Tickets (placeholder)
-  async tickets(): Promise<{ results: unknown[]; count: number; detail?: string }> {
-    return api("/api/v1/admin/tickets/");
+  // Tickets
+  async tickets(params?: { status?: string; page?: number }): Promise<Page<AdminTicket>> {
+    const raw = await api<Envelope<Page<AdminTicket>>>("/api/v1/admin/tickets/", {
+      query: params as Record<string, string | number | boolean | undefined | null>,
+    });
+    return unwrap(raw);
+  },
+
+  async ticket(id: number): Promise<AdminTicket> {
+    const raw = await api<Envelope<AdminTicket>>(`/api/v1/admin/tickets/${id}/`);
+    return unwrap(raw);
+  },
+
+  async replyTicket(id: number, body: FormData): Promise<AdminTicket> {
+    const raw = await api<Envelope<AdminTicket>>(`/api/v1/admin/tickets/${id}/reply/`, {
+      method: "POST",
+      body,
+    });
+    return unwrap(raw);
+  },
+
+  async closeTicket(id: number): Promise<AdminTicket> {
+    const raw = await api<Envelope<AdminTicket>>(`/api/v1/admin/tickets/${id}/close/`, {
+      method: "PATCH",
+      json: {},
+    });
+    return unwrap(raw);
   },
 
   // Broadcast / Messages
