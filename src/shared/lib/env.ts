@@ -17,15 +17,19 @@ const parsed = schema.safeParse({
 });
 
 const isBuildPhase = process.env.NEXT_PHASE === "phase-production-build";
+// Bu modul client bundle'ga ham kiradi. Brauzerda SESSION_SECRET server siri
+// mavjud emas — shuning uchun throw faqat serverda ishlaydi, aks holda sahifa
+// brauzerda oq ekran bilan yiqiladi.
+const isServer = typeof window === "undefined";
 
 if (!parsed.success) {
-  if (process.env.NODE_ENV === "production" && !isBuildPhase) {
+  if (isServer && process.env.NODE_ENV === "production" && !isBuildPhase) {
     throw new Error(
       "[env] missing/invalid required env vars: " +
         JSON.stringify(parsed.error.flatten().fieldErrors)
     );
   }
-  if (process.env.NODE_ENV !== "production") {
+  if (isServer && process.env.NODE_ENV !== "production") {
     console.warn("[env] missing/invalid env vars:", parsed.error.flatten().fieldErrors);
   }
 }
