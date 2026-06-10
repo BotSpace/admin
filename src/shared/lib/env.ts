@@ -16,8 +16,18 @@ const parsed = schema.safeParse({
   SESSION_SECRET: process.env.SESSION_SECRET,
 });
 
-if (!parsed.success && process.env.NODE_ENV !== "production") {
-  console.warn("[env] missing/invalid env vars:", parsed.error.flatten().fieldErrors);
+const isBuildPhase = process.env.NEXT_PHASE === "phase-production-build";
+
+if (!parsed.success) {
+  if (process.env.NODE_ENV === "production" && !isBuildPhase) {
+    throw new Error(
+      "[env] missing/invalid required env vars: " +
+        JSON.stringify(parsed.error.flatten().fieldErrors)
+    );
+  }
+  if (process.env.NODE_ENV !== "production") {
+    console.warn("[env] missing/invalid env vars:", parsed.error.flatten().fieldErrors);
+  }
 }
 
 export const env = parsed.success
@@ -27,5 +37,7 @@ export const env = parsed.success
       NEXT_PUBLIC_DASHBOARD_URL: process.env.NEXT_PUBLIC_DASHBOARD_URL ?? "https://botspace.uz",
       SESSION_COOKIE_NAME: process.env.SESSION_COOKIE_NAME ?? "bm_session",
       SESSION_COOKIE_DOMAIN: process.env.SESSION_COOKIE_DOMAIN,
-      SESSION_SECRET: process.env.SESSION_SECRET ?? "dev-secret-change-me-please-32chars",
+      SESSION_SECRET:
+        process.env.SESSION_SECRET ??
+        (process.env.NODE_ENV === "production" ? "" : "dev-secret-change-me-please-32chars"),
     };
