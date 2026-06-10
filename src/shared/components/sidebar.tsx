@@ -18,6 +18,7 @@ import {
   ShieldCheck,
   Megaphone,
   Settings2,
+  Newspaper,
 } from "lucide-react";
 import { cn } from "@/shared/lib/utils";
 import { useState } from "react";
@@ -87,6 +88,11 @@ const NAV: NavItem[] = [
     label: "Ticketlar",
     href: "/tickets",
     icon: <Ticket className="h-4 w-4" />,
+  },
+  {
+    label: "Blog",
+    href: "/blog",
+    icon: <Newspaper className="h-4 w-4" />,
   },
   {
     label: "Audit log",

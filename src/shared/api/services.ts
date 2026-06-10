@@ -302,6 +302,32 @@ export type AdminTicket = {
   messages?: AdminTicketMessage[];
 };
 
+// ── Blog types ───────────────────────────────────────────────────────────────
+
+export type AdminBlogPost = {
+  id: number;
+  title: string;
+  slug: string;
+  excerpt: string;
+  content: string;
+  cover_image: string | null;
+  is_published: boolean;
+  author: number | null;
+  author_name: string | null;
+  reading_time: number;
+  published_at: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type BlogPostInput = {
+  title: string;
+  excerpt?: string;
+  content: string;
+  cover_image?: string | null;
+  is_published?: boolean;
+};
+
 // ── Transaction types ──────────────────────────────────────────────────────
 
 export type Transaction = {
@@ -863,5 +889,38 @@ export const AdminAPI = {
       json: body,
     });
     return unwrap(raw);
+  },
+
+  // Blog
+  async blogPosts(params?: { is_published?: string; page?: number }): Promise<Page<AdminBlogPost>> {
+    const raw = await api<Envelope<Page<AdminBlogPost>>>("/api/v1/admin/blog/", {
+      query: params as Record<string, string | number | boolean | undefined | null>,
+    });
+    return unwrap(raw);
+  },
+
+  async blogPost(id: number): Promise<AdminBlogPost> {
+    const raw = await api<Envelope<AdminBlogPost>>(`/api/v1/admin/blog/${id}/`);
+    return unwrap(raw);
+  },
+
+  async createBlogPost(body: BlogPostInput): Promise<AdminBlogPost> {
+    const raw = await api<Envelope<AdminBlogPost>>("/api/v1/admin/blog/", {
+      method: "POST",
+      json: body,
+    });
+    return unwrap(raw);
+  },
+
+  async updateBlogPost(id: number, body: Partial<BlogPostInput>): Promise<AdminBlogPost> {
+    const raw = await api<Envelope<AdminBlogPost>>(`/api/v1/admin/blog/${id}/`, {
+      method: "PATCH",
+      json: body,
+    });
+    return unwrap(raw);
+  },
+
+  async deleteBlogPost(id: number): Promise<void> {
+    await api<void>(`/api/v1/admin/blog/${id}/`, { method: "DELETE" });
   },
 };
