@@ -14,7 +14,6 @@ import { createBlogPostAction, updateBlogPostAction } from "./actions";
 type FormState = {
   title: string;
   excerpt: string;
-  cover_image: string;
   content: string;
   is_published: boolean;
 };
@@ -23,7 +22,6 @@ function toForm(post?: AdminBlogPost): FormState {
   return {
     title: post?.title ?? "",
     excerpt: post?.excerpt ?? "",
-    cover_image: post?.cover_image ?? "",
     content: post?.content ?? "",
     is_published: post?.is_published ?? false,
   };
@@ -51,7 +49,6 @@ export function BlogForm({ post }: { post?: AdminBlogPost }) {
     const payload = {
       title: form.title,
       excerpt: form.excerpt,
-      cover_image: form.cover_image,
       content: form.content,
       is_published: form.is_published,
     };
@@ -91,18 +88,10 @@ export function BlogForm({ post }: { post?: AdminBlogPost }) {
       </div>
 
       <div className="space-y-1.5">
-        <Label htmlFor="blog-cover">Muqova rasmi (URL, ixtiyoriy)</Label>
-        <Input
-          id="blog-cover"
-          type="url"
-          value={form.cover_image}
-          onChange={(e) => set("cover_image", e.target.value)}
-          placeholder="https://..."
-        />
-      </div>
-
-      <div className="space-y-1.5">
         <Label>Matn (Markdown)</Label>
+        <p className="text-xs text-muted-foreground">
+          Rasm qo&apos;shish: <code>![tavsif](https://rasm-url)</code> — matn ichida istalgan joyga.
+        </p>
         <div className="grid gap-3 md:grid-cols-2">
           <Textarea
             value={form.content}

@@ -10,7 +10,6 @@ function buildBody(input: BlogPostInput): BlogPostInput {
     title: input.title.trim(),
     excerpt: input.excerpt?.trim() || "",
     content: input.content,
-    cover_image: input.cover_image?.trim() || null,
     is_published: input.is_published ?? false,
   };
 }

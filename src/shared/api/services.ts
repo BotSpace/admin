@@ -310,7 +310,6 @@ export type AdminBlogPost = {
   slug: string;
   excerpt: string;
   content: string;
-  cover_image: string | null;
   is_published: boolean;
   author: number | null;
   author_name: string | null;
@@ -324,7 +323,6 @@ export type BlogPostInput = {
   title: string;
   excerpt?: string;
   content: string;
-  cover_image?: string | null;
   is_published?: boolean;
 };
 
