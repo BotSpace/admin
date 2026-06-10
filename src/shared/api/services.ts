@@ -129,6 +129,8 @@ export type AdminProject = {
   owner_phone?: string;
   is_template?: boolean;
   release_webhook_uuid?: string;
+  // Oxirgi relizning holati (running/active/stopped/...) yoki null (reliz yo'q).
+  release_status?: string | null;
   created_at: string;
   updated_at?: string;
   // legacy fields kept for backward compat

@@ -16,6 +16,24 @@ type SearchParams = {
   page?: string;
 };
 
+// Oxirgi reliz holatini "bot ishlayaptimi" ko'rinishida ko'rsatadi.
+function ReleaseStatusBadge({ status }: { status?: string | null }) {
+  if (!status) {
+    return <Badge variant="outline">Reliz yo&apos;q</Badge>;
+  }
+  const map: Record<string, { variant: "success" | "warn" | "destructive" | "secondary"; label: string }> = {
+    running: { variant: "success", label: "Ishlayapti" },
+    active: { variant: "success", label: "Ishlayapti" },
+    stopped: { variant: "destructive", label: "To'xtagan" },
+    error: { variant: "destructive", label: "Xato" },
+    failed: { variant: "destructive", label: "Xato" },
+    pending: { variant: "warn", label: "Navbatda" },
+    building: { variant: "warn", label: "Tayyorlanmoqda" },
+  };
+  const m = map[status] ?? { variant: "secondary" as const, label: status };
+  return <Badge variant={m.variant}>{m.label}</Badge>;
+}
+
 export default async function ProjectsPage({
   searchParams,
 }: {
@@ -122,6 +140,11 @@ export default async function ProjectsPage({
                   {p.is_template ? "Shablon" : "Oddiy"}
                 </Badge>
               ),
+            },
+            {
+              key: "release_status",
+              header: "Holat",
+              cell: (p) => <ReleaseStatusBadge status={p.release_status} />,
             },
             {
               key: "created",

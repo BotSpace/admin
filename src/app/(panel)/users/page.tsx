@@ -120,13 +120,14 @@ export default async function UsersPage({
             },
             {
               key: "phone",
-              header: "Telefon",
+              header: "Telefon / Email",
               cell: (u) => (
                 <Link
                   href={`/users/${u.id}`}
                   className="hover:underline text-sm"
                 >
-                  {u.phone}
+                  {/* Google orqali kirganlarda telefon yo'q — emailni ko'rsatamiz */}
+                  {u.phone || u.email || "—"}
                 </Link>
               ),
             },
