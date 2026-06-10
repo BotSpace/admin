@@ -17,6 +17,7 @@ import {
   TableRow,
 } from "@/shared/components/ui/table";
 import { UserActions } from "@/features/users/user-actions";
+import { BotOrdersCard } from "@/features/bot-orders/bot-orders-card";
 import { format } from "date-fns";
 import { ChevronLeft } from "lucide-react";
 import { formatCurrency } from "@/shared/lib/utils";
@@ -308,7 +309,10 @@ export default async function UserDetailPage({
         </CardContent>
       </Card>
 
-      {/* 5. Sotib olingan shablonlar */}
+      {/* 5. Botlaridagi to'lovlar */}
+      <BotOrdersCard owner={user.id} title="Botlaridagi to'lovlar" />
+
+      {/* 6. Sotib olingan shablonlar */}
       <Card>
         <CardHeader>
           <CardTitle className="text-sm font-semibold">

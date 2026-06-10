@@ -17,6 +17,7 @@ import {
   TableRow,
 } from "@/shared/components/ui/table";
 import { DeleteProjectButton } from "@/features/projects/delete-project-button";
+import { BotOrdersCard } from "@/features/bot-orders/bot-orders-card";
 import { format } from "date-fns";
 import { ChevronLeft } from "lucide-react";
 
@@ -210,6 +211,9 @@ export default async function ProjectDetailPage({
           )}
         </CardContent>
       </Card>
+
+      {/* Botdan tushgan to'lovlar */}
+      <BotOrdersCard project={project.id} />
     </div>
   );
 }

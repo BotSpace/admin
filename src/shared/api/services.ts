@@ -345,6 +345,30 @@ export type Transaction = {
 
 export type AdminTransaction = Transaction;
 
+// Bot payment order (botdan tushgan to'lov) — PaymentOrderModel admin ko'rinishi.
+export type AdminBotOrder = {
+  id: number;
+  project: number;
+  project_name: string | null;
+  owner: number;
+  owner_phone: string | null;
+  payer_chat_id: number | null;
+  payer_first_name: string | null;
+  payer_last_name: string | null;
+  payer_username: string | null;
+  payer_name: string | null;
+  amount: string;
+  commission: string;
+  net_amount: string;
+  provider: string;
+  status: string;
+  comment: string | null;
+  paid_at: string | null;
+  is_debug: boolean;
+  created_at: string;
+  updated_at: string;
+};
+
 export type AdminTransactionDetail = {
   id: number;
   user?: number;
@@ -692,6 +716,21 @@ export const AdminAPI = {
 
   async transaction(id: number): Promise<AdminTransactionDetail> {
     const raw = await api<Envelope<AdminTransactionDetail>>(`/api/v1/admin/transactions/${id}/`);
+    return unwrap(raw);
+  },
+
+  // Bot payment orders (botdan tushgan to'lovlar) — by project and/or owner.
+  async botOrders(params?: {
+    project?: number;
+    owner?: number;
+    status?: string;
+    search?: string;
+    ordering?: string;
+    page?: number;
+  }): Promise<Page<AdminBotOrder>> {
+    const raw = await api<Envelope<Page<AdminBotOrder>>>("/api/v1/admin/bot-orders/", {
+      query: params as Record<string, string | number | boolean | undefined | null>,
+    });
     return unwrap(raw);
   },
 
