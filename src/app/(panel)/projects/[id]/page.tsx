@@ -16,6 +16,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/shared/components/ui/table";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/shared/components/ui/tabs";
 import { DeleteProjectButton } from "@/features/projects/delete-project-button";
 import { BotOrdersCard } from "@/features/bot-orders/bot-orders-card";
 import { format } from "date-fns";
@@ -39,9 +40,7 @@ function ReleaseStatusBadge({ status }: { status: string }) {
     pending: "warn",
     building: "warn",
   };
-  return (
-    <Badge variant={map[status] ?? "secondary"}>{status}</Badge>
-  );
+  return <Badge variant={map[status] ?? "secondary"}>{status}</Badge>;
 }
 
 export default async function ProjectDetailPage({
@@ -86,134 +85,140 @@ export default async function ProjectDetailPage({
         </div>
       </div>
 
-      {/* Asosiy ma'lumotlar */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-sm font-semibold">Asosiy ma&apos;lumotlar</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <dl className="grid grid-cols-2 gap-x-8 gap-y-3 text-sm sm:grid-cols-3">
-            <dt className="text-muted-foreground">ID</dt>
-            <dd className="font-mono col-span-2">#{project.id}</dd>
+      <Tabs defaultValue="general">
+        <TabsList>
+          <TabsTrigger value="general">Umumiy</TabsTrigger>
+          <TabsTrigger value="releases">Relizlar ({project.releases_count})</TabsTrigger>
+          <TabsTrigger value="payments">To&apos;lovlar</TabsTrigger>
+        </TabsList>
 
-            <dt className="text-muted-foreground">Nomi</dt>
-            <dd className="col-span-2 font-medium">{project.name}</dd>
+        {/* ── Umumiy: asosiy + texnik ── */}
+        <TabsContent value="general" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-sm font-semibold">Asosiy ma&apos;lumotlar</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <dl className="grid grid-cols-2 gap-x-8 gap-y-3 text-sm sm:grid-cols-3">
+                <dt className="text-muted-foreground">ID</dt>
+                <dd className="font-mono col-span-2">#{project.id}</dd>
 
-            <dt className="text-muted-foreground">Username</dt>
-            <dd className="col-span-2">{project.username ? `@${project.username}` : "—"}</dd>
+                <dt className="text-muted-foreground">Nomi</dt>
+                <dd className="col-span-2 font-medium">{project.name}</dd>
 
-            <dt className="text-muted-foreground">Tavsif</dt>
-            <dd className="col-span-2">{project.description || "—"}</dd>
+                <dt className="text-muted-foreground">Username</dt>
+                <dd className="col-span-2">{project.username ? `@${project.username}` : "—"}</dd>
 
-            <dt className="text-muted-foreground">Turi</dt>
-            <dd className="col-span-2">
-              <Badge variant={project.is_template ? "secondary" : "outline"}>
-                {project.is_template ? "Shablon" : "Oddiy"}
-              </Badge>
-            </dd>
+                <dt className="text-muted-foreground">Tavsif</dt>
+                <dd className="col-span-2">{project.description || "—"}</dd>
 
-            <dt className="text-muted-foreground">Egasi (telefon)</dt>
-            <dd className="col-span-2">
-              <Link
-                href={`/users/${project.owner.id}`}
-                className="text-primary hover:underline"
-              >
-                {project.owner.phone}
-              </Link>
-            </dd>
+                <dt className="text-muted-foreground">Turi</dt>
+                <dd className="col-span-2">
+                  <Badge variant={project.is_template ? "secondary" : "outline"}>
+                    {project.is_template ? "Shablon" : "Oddiy"}
+                  </Badge>
+                </dd>
 
-            <dt className="text-muted-foreground">Egasi (email)</dt>
-            <dd className="col-span-2">{project.owner.email || "—"}</dd>
+                <dt className="text-muted-foreground">Egasi (telefon)</dt>
+                <dd className="col-span-2">
+                  <Link href={`/users/${project.owner.id}`} className="text-primary hover:underline">
+                    {project.owner.phone || project.owner.email || `#${project.owner.id}`}
+                  </Link>
+                </dd>
 
-            <dt className="text-muted-foreground">Yaratilgan</dt>
-            <dd className="col-span-2">{formatDate(project.created_at)}</dd>
+                <dt className="text-muted-foreground">Egasi (email)</dt>
+                <dd className="col-span-2">{project.owner.email || "—"}</dd>
 
-            <dt className="text-muted-foreground">Yangilangan</dt>
-            <dd className="col-span-2">{formatDate(project.updated_at)}</dd>
-          </dl>
-        </CardContent>
-      </Card>
+                <dt className="text-muted-foreground">Yaratilgan</dt>
+                <dd className="col-span-2">{formatDate(project.created_at)}</dd>
 
-      {/* Webhook va Mongo */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-sm font-semibold">Texnik ma&apos;lumotlar</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <dl className="grid grid-cols-2 gap-x-8 gap-y-3 text-sm sm:grid-cols-3">
-            <dt className="text-muted-foreground">Release webhook</dt>
-            <dd className="col-span-2 font-mono text-xs break-all">
-              {project.release_webhook_uuid || "—"}
-            </dd>
+                <dt className="text-muted-foreground">Yangilangan</dt>
+                <dd className="col-span-2">{formatDate(project.updated_at)}</dd>
+              </dl>
+            </CardContent>
+          </Card>
 
-            <dt className="text-muted-foreground">Debug webhook</dt>
-            <dd className="col-span-2 font-mono text-xs break-all">
-              {project.debug_webhook_uuid || "—"}
-            </dd>
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-sm font-semibold">Texnik ma&apos;lumotlar</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <dl className="grid grid-cols-2 gap-x-8 gap-y-3 text-sm sm:grid-cols-3">
+                <dt className="text-muted-foreground">Release webhook</dt>
+                <dd className="col-span-2 font-mono text-xs break-all">
+                  {project.release_webhook_uuid || "—"}
+                </dd>
 
-            <dt className="text-muted-foreground">Mongo ma&apos;lumotlar ombori</dt>
-            <dd className="col-span-2 font-mono text-xs break-all">
-              {project.mongo_database || "—"}
-            </dd>
+                <dt className="text-muted-foreground">Debug webhook</dt>
+                <dd className="col-span-2 font-mono text-xs break-all">
+                  {project.debug_webhook_uuid || "—"}
+                </dd>
 
-            <dt className="text-muted-foreground">Joriy node soni</dt>
-            <dd className="col-span-2 font-medium">{project.current_node_count}</dd>
-          </dl>
-        </CardContent>
-      </Card>
+                <dt className="text-muted-foreground">Mongo ma&apos;lumotlar ombori</dt>
+                <dd className="col-span-2 font-mono text-xs break-all">
+                  {project.mongo_database || "—"}
+                </dd>
 
-      {/* Relizlar */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-sm font-semibold">
-            Relizlar{" "}
-            <span className="ml-1 rounded-full bg-secondary px-2 py-0.5 text-xs font-normal">
-              {project.releases_count}
-            </span>
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="p-0">
-          {project.releases.length === 0 ? (
-            <p className="px-6 py-4 text-sm text-muted-foreground">Reliz yo&apos;q</p>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Versiya</TableHead>
-                  <TableHead>Holat</TableHead>
-                  <TableHead>Service ID</TableHead>
-                  <TableHead>Node soni</TableHead>
-                  <TableHead>Sana</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {project.releases.map((r) => (
-                  <TableRow key={r.id}>
-                    <TableCell className="font-mono text-sm font-medium">
-                      {r.version}
-                    </TableCell>
-                    <TableCell>
-                      <ReleaseStatusBadge status={r.status} />
-                    </TableCell>
-                    <TableCell className="font-mono text-xs text-muted-foreground">
-                      {r.service_id || "—"}
-                    </TableCell>
-                    <TableCell className="text-sm">
-                      {r.node_count ?? "—"}
-                    </TableCell>
-                    <TableCell className="text-xs text-muted-foreground">
-                      {formatDate(r.created_at)}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          )}
-        </CardContent>
-      </Card>
+                <dt className="text-muted-foreground">Joriy node soni</dt>
+                <dd className="col-span-2 font-medium">{project.current_node_count}</dd>
+              </dl>
+            </CardContent>
+          </Card>
+        </TabsContent>
 
-      {/* Botdan tushgan to'lovlar */}
-      <BotOrdersCard project={project.id} />
+        {/* ── Relizlar ── */}
+        <TabsContent value="releases">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-sm font-semibold">
+                Relizlar{" "}
+                <span className="ml-1 rounded-full bg-secondary px-2 py-0.5 text-xs font-normal">
+                  {project.releases_count}
+                </span>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-0">
+              {project.releases.length === 0 ? (
+                <p className="px-6 py-4 text-sm text-muted-foreground">Reliz yo&apos;q</p>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Versiya</TableHead>
+                      <TableHead>Holat</TableHead>
+                      <TableHead>Service ID</TableHead>
+                      <TableHead>Node soni</TableHead>
+                      <TableHead>Sana</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {project.releases.map((r) => (
+                      <TableRow key={r.id}>
+                        <TableCell className="font-mono text-sm font-medium">{r.version}</TableCell>
+                        <TableCell>
+                          <ReleaseStatusBadge status={r.status} />
+                        </TableCell>
+                        <TableCell className="font-mono text-xs text-muted-foreground">
+                          {r.service_id || "—"}
+                        </TableCell>
+                        <TableCell className="text-sm">{r.node_count ?? "—"}</TableCell>
+                        <TableCell className="text-xs text-muted-foreground">
+                          {formatDate(r.created_at)}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* ── To'lovlar (botdan tushgan) ── */}
+        <TabsContent value="payments">
+          <BotOrdersCard project={project.id} />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
