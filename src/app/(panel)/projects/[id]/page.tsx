@@ -17,10 +17,11 @@ import {
   TableRow,
 } from "@/shared/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/shared/components/ui/tabs";
+import { Button } from "@/shared/components/ui/button";
 import { DeleteProjectButton } from "@/features/projects/delete-project-button";
 import { BotOrdersCard } from "@/features/bot-orders/bot-orders-card";
 import { format } from "date-fns";
-import { ChevronLeft } from "lucide-react";
+import { ChevronLeft, Database } from "lucide-react";
 
 function formatDate(value: string | null | undefined): string {
   if (!value) return "—";
@@ -81,6 +82,12 @@ export default async function ProjectDetailPage({
           <Badge variant={project.is_template ? "secondary" : "outline"}>
             {project.is_template ? "Shablon" : "Oddiy"}
           </Badge>
+          <Button asChild variant="outline" size="sm">
+            <Link href={`/projects/${project.id}/cms`} className="gap-2">
+              <Database className="h-4 w-4" />
+              Collection&apos;lar
+            </Link>
+          </Button>
           <DeleteProjectButton id={project.id} name={project.name} />
         </div>
       </div>
