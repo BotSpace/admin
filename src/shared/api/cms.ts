@@ -80,6 +80,14 @@ export type CmsDocumentListResponse = {
   skip: number;
 };
 
+// Cursor-paginated page (relation picker infinite-scroll). next_cursor is the
+// last _id of a full page, or null when there are no more documents.
+export type CmsDocumentCursorResponse = {
+  results: CmsDocument[];
+  limit: number;
+  next_cursor: string | null;
+};
+
 export type CmsAuditEntry = {
   id: number;
   action: string;
@@ -194,6 +202,23 @@ export const CmsAPI = {
     }
     if (params.sort) query.sort = params.sort;
     return api<CmsDocumentListResponse>(cms(projectId, name, "documents") + "/", { query });
+  },
+  // Cursor pagination for relation pickers: pass the previous page's
+  // next_cursor to fetch the next batch; optional search hits primary_field.
+  listDocumentsCursor: (
+    projectId: string | number,
+    name: string,
+    params: { cursor?: string | null; search?: string; limit?: number } = {}
+  ): Promise<CmsDocumentCursorResponse> => {
+    // paginate=cursor is the always-present flag (empty cursor is dropped by the
+    // query builder, so it can't signal cursor mode on the first page).
+    const query: Record<string, string | number | undefined> = {
+      paginate: "cursor",
+      limit: params.limit ?? 30,
+    };
+    if (params.cursor) query.cursor = params.cursor;
+    if (params.search) query.search = params.search;
+    return api<CmsDocumentCursorResponse>(cms(projectId, name, "documents") + "/", { query });
   },
   getDocument: (
     projectId: string | number,
