@@ -153,7 +153,7 @@ export function FieldEditor({
           value={primaryField}
           onChange={(e) => handlePrimaryFieldChange(e.target.value)}
           disabled={pending}
-          className="h-8 w-full rounded-md border bg-transparent px-2 text-sm disabled:opacity-50"
+          className="h-8 w-full rounded-md border bg-background text-foreground [&>option]:bg-background [&>option]:text-foreground px-2 text-sm disabled:opacity-50"
         >
           <option value="">— tanlanmagan —</option>
           {fields.filter((f) => f.name.trim()).map((f) => (
@@ -183,7 +183,7 @@ export function FieldEditor({
                     arr.map((x, idx) => (idx === i ? { ...x, kind: e.target.value as CmsFieldKind } : x))
                   )
                 }
-                className="h-8 rounded-md border bg-transparent px-2 text-sm"
+                className="h-8 rounded-md border bg-background text-foreground [&>option]:bg-background [&>option]:text-foreground px-2 text-sm"
               >
                 {KINDS.map((k) => (
                   <option key={k} value={k}>{k}</option>
@@ -196,7 +196,7 @@ export function FieldEditor({
                     arr.map((x, idx) => (idx === i ? { ...x, index: e.target.value as CmsIndexKind } : x))
                   )
                 }
-                className="h-8 rounded-md border bg-transparent px-2 text-sm"
+                className="h-8 rounded-md border bg-background text-foreground [&>option]:bg-background [&>option]:text-foreground px-2 text-sm"
               >
                 {INDEX_KINDS.map((k) => (
                   <option key={k} value={k}>idx: {k}</option>
@@ -257,7 +257,7 @@ export function FieldEditor({
                         )
                       )
                     }
-                    className="h-8 rounded-md border bg-transparent px-2 text-sm"
+                    className="h-8 rounded-md border bg-background text-foreground [&>option]:bg-background [&>option]:text-foreground px-2 text-sm"
                   >
                     <option value="">— tanlang —</option>
                     {collections.map((c) => (
@@ -278,7 +278,7 @@ export function FieldEditor({
                         )
                       )
                     }
-                    className="h-8 rounded-md border bg-transparent px-2 text-sm"
+                    className="h-8 rounded-md border bg-background text-foreground [&>option]:bg-background [&>option]:text-foreground px-2 text-sm"
                   >
                     {CASCADE_MODES.map((m) => (
                       <option key={m} value={m}>{m}</option>
@@ -306,7 +306,7 @@ export function FieldEditor({
             <select
               value={newField.kind}
               onChange={(e) => setNewField({ ...newField, kind: e.target.value as CmsFieldKind })}
-              className="h-8 rounded-md border bg-transparent px-2 text-sm"
+              className="h-8 rounded-md border bg-background text-foreground [&>option]:bg-background [&>option]:text-foreground px-2 text-sm"
             >
               {KINDS.map((k) => (
                 <option key={k} value={k}>{k}</option>
@@ -315,7 +315,7 @@ export function FieldEditor({
             <select
               value={newField.index}
               onChange={(e) => setNewField({ ...newField, index: e.target.value as CmsIndexKind })}
-              className="h-8 rounded-md border bg-transparent px-2 text-sm"
+              className="h-8 rounded-md border bg-background text-foreground [&>option]:bg-background [&>option]:text-foreground px-2 text-sm"
             >
               {INDEX_KINDS.map((k) => (
                 <option key={k} value={k}>idx: {k}</option>
@@ -350,7 +350,7 @@ export function FieldEditor({
                       relation_collection: e.target.value ? Number(e.target.value) : null,
                     })
                   }
-                  className="h-8 rounded-md border bg-transparent px-2 text-sm"
+                  className="h-8 rounded-md border bg-background text-foreground [&>option]:bg-background [&>option]:text-foreground px-2 text-sm"
                 >
                   <option value="">— tanlang —</option>
                   {collections.map((c) => (
@@ -367,7 +367,7 @@ export function FieldEditor({
                   onChange={(e) =>
                     setNewField({ ...newField, cascade: e.target.value as CmsCascadeMode })
                   }
-                  className="h-8 rounded-md border bg-transparent px-2 text-sm"
+                  className="h-8 rounded-md border bg-background text-foreground [&>option]:bg-background [&>option]:text-foreground px-2 text-sm"
                 >
                   {CASCADE_MODES.map((m) => (
                     <option key={m} value={m}>{m}</option>
