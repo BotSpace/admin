@@ -14,7 +14,8 @@ import {
   DialogFooter,
 } from "@/shared/components/ui/dialog";
 import { deleteDocumentAction } from "../actions";
-import type { CmsDocument, CmsField } from "@/shared/api/cms";
+import type { CmsCollection, CmsDocument, CmsField } from "@/shared/api/cms";
+import { RelationValue } from "./relation-value";
 
 type Props = {
   open: boolean;
@@ -23,6 +24,7 @@ type Props = {
   collectionName: string;
   doc: CmsDocument | null;
   fields: CmsField[];
+  collections?: CmsCollection[];
   onDeleted?: () => void;
 };
 
@@ -122,6 +124,7 @@ export function DocumentViewDrawer({
   collectionName,
   doc,
   fields,
+  collections = [],
   onDeleted,
 }: Props) {
   const router = useRouter();
@@ -174,7 +177,16 @@ export function DocumentViewDrawer({
 
           {fields.map((f) => (
             <FieldRow key={f.name} label={f.label || f.name} kind={f.kind}>
-              {formatValue(doc[f.name], f.kind)}
+              {f.kind === "relation" ? (
+                <RelationValue
+                  projectId={projectId}
+                  collections={collections}
+                  relationCollectionId={f.relation_collection}
+                  value={doc[f.name]}
+                />
+              ) : (
+                formatValue(doc[f.name], f.kind)
+              )}
             </FieldRow>
           ))}
 
