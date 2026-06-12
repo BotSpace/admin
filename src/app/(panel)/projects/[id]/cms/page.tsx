@@ -57,9 +57,9 @@ export default async function ProjectCmsListPage({
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {collections.map((c) => (
-            <Link key={c.id} href={`/projects/${id}/cms/${c.name}/data`} className="block">
-              <Card className="overflow-hidden transition hover:border-primary/40">
-                <CardContent className="space-y-3 p-5">
+            <Link key={c.id} href={`/projects/${id}/cms/${c.name}/data`} className="block h-full">
+              <Card className="flex h-full flex-col overflow-hidden transition hover:border-primary/40">
+                <CardContent className="flex flex-1 flex-col space-y-3 p-5">
                   <div className="flex items-start justify-between gap-2">
                     <div>
                       <div className="flex items-center gap-2">
@@ -72,7 +72,7 @@ export default async function ProjectCmsListPage({
                   {c.description && (
                     <p className="line-clamp-2 text-sm text-muted-foreground">{c.description}</p>
                   )}
-                  <div className="pt-2">
+                  <div className="mt-auto pt-2">
                     <div className="text-xs text-muted-foreground">
                       {c.fields_count ?? c.fields?.length ?? 0} maydon · v{c.schema_version}
                     </div>
