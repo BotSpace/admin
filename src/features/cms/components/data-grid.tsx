@@ -690,6 +690,7 @@ export function DataGrid({ projectId, collectionName, fields, collections = [] }
                             collections={collections}
                             relationCollectionId={f.relation_collection}
                             value={d[f.name]}
+                            serverLabel={d._rel?.[f.name]}
                           />
                         ) : (
                           renderCell(d[f.name])
