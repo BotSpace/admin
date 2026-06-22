@@ -72,7 +72,13 @@ export function DeleteModuleButton({ slug, name, redirectAfter }: Props) {
       </Button>
 
       <Dialog open={open} onOpenChange={handleOpenChange}>
-        <DialogContent className="max-w-md">
+        <DialogContent
+          className="max-w-md"
+          // Don't let the opening click (or any outside pointer) dismiss it —
+          // this is what caused the dialog to flash open then instantly close.
+          onPointerDownOutside={(e) => e.preventDefault()}
+          onInteractOutside={(e) => e.preventDefault()}
+        >
           <DialogHeader>
             <DialogTitle>{`"${name}" modulini o'chirish`}</DialogTitle>
             <DialogDescription>
