@@ -469,6 +469,28 @@ export type MeResponse = {
   is_superuser: boolean;
 };
 
+export type AdminModuleNode = {
+  type: string;
+  title: string;
+  category: string;
+  trigger: boolean;
+};
+
+export type AdminModule = {
+  id: number;
+  slug: string;
+  name: string;
+  description: string;
+  icon: string;
+  image: string;
+  port: number;
+  active: boolean;
+  manifest_fetched_at: string | null;
+  created_at: string;
+  nodes: AdminModuleNode[];
+  docs: string;
+};
+
 // ── AdminAPI namespace ─────────────────────────────────────────────────────
 
 export const AdminAPI = {
@@ -961,5 +983,17 @@ export const AdminAPI = {
 
   async deleteBlogPost(id: number): Promise<void> {
     await api<void>(`/api/v1/admin/blog/${id}/`, { method: "DELETE" });
+  },
+
+  // External modules catalog (ModuleViewSet — plain DRF pagination, no envelope)
+  async modules(): Promise<AdminModule[]> {
+    const raw = await api<{ results?: AdminModule[] } | AdminModule[]>("/api/modules/");
+    if (Array.isArray(raw)) return raw;
+    return raw.results ?? [];
+  },
+
+  // Re-fetch a module's manifest from its running pod (admin-only).
+  async refreshModuleManifest(slug: string): Promise<void> {
+    await api<unknown>(`/api/modules/${slug}/refresh-manifest/`, { method: "POST" });
   },
 };

@@ -19,6 +19,7 @@ import {
   Megaphone,
   Settings2,
   Newspaper,
+  Puzzle,
 } from "lucide-react";
 import { cn } from "@/shared/lib/utils";
 import { useState } from "react";
@@ -78,6 +79,11 @@ const NAV: NavItem[] = [
     label: "Tariflar",
     href: "/plans",
     icon: <CreditCard className="h-4 w-4" />,
+  },
+  {
+    label: "Modullar",
+    href: "/modules",
+    icon: <Puzzle className="h-4 w-4" />,
   },
   {
     label: "Broadcast",
