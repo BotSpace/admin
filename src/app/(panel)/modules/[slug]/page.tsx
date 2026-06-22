@@ -44,6 +44,20 @@ export default async function ModuleDetailPage({ params }: PageProps) {
     notFound();
   }
 
+  // manifest_cache._source.mode dan mode olish
+  const manifestCache = mod.manifest_cache as
+    | { _source?: { mode?: string; endpoint?: string } }
+    | null
+    | undefined;
+  const sourceMode = manifestCache?._source?.mode;
+  const sourceEndpoint = manifestCache?._source?.endpoint;
+  const sourceModeLabel =
+    sourceMode === "github"
+      ? "GitHub build"
+      : sourceMode === "endpoint"
+      ? `Self-hosted${sourceEndpoint ? `: ${sourceEndpoint}` : ""}`
+      : null;
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -55,12 +69,17 @@ export default async function ModuleDetailPage({ params }: PageProps) {
             </Button>
           </Link>
           <div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               {mod.icon && <span className="text-2xl">{mod.icon}</span>}
               <h1 className="text-2xl font-bold">{mod.name}</h1>
               <Badge variant={mod.active ? "success" : "secondary"}>
                 {mod.active ? "Faol" : "Nofaol"}
               </Badge>
+              {sourceModeLabel && (
+                <Badge variant="outline" className="font-mono text-xs">
+                  {sourceModeLabel}
+                </Badge>
+              )}
             </div>
             <p className="text-muted-foreground text-sm font-mono mt-0.5">{mod.slug}</p>
             {mod.description && (
@@ -70,7 +89,7 @@ export default async function ModuleDetailPage({ params }: PageProps) {
         </div>
         <div className="flex items-center gap-2 shrink-0">
           <RefreshManifestButton slug={mod.slug} />
-          <ModuleFormDialog module={mod} />
+          <ModuleFormDialog isUpdate />
           <DeleteModuleButton slug={mod.slug} name={mod.name} redirectAfter />
         </div>
       </div>

@@ -14,6 +14,21 @@ export async function refreshModuleManifestAction(slug: string) {
   }
 }
 
+export async function registerModuleYamlAction(body: { yaml?: string; yaml_url?: string }) {
+  try {
+    const res = await AdminAPI.registerModuleYaml(body);
+    revalidatePath("/modules");
+    if (res.module?.slug) revalidatePath(`/modules/${res.module.slug}`);
+    return { ok: true, mode: res.mode, slug: res.module?.slug };
+  } catch (e) {
+    if (isApiError(e)) {
+      // detail field backenddan keladi — uni to'g'ridan qaytaramiz
+      return { ok: false, message: e.message };
+    }
+    return { ok: false, message: "Xatolik yuz berdi" };
+  }
+}
+
 export async function createModuleAction(body: AdminModuleInput) {
   try {
     await AdminAPI.createModule(body);

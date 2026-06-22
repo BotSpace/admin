@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 import { toast } from "sonner";
-import { Plus, Pencil } from "lucide-react";
+import { Plus, RefreshCw } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -13,97 +13,80 @@ import {
 import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
 import { Label } from "@/shared/components/ui/label";
-import { Switch } from "@/shared/components/ui/switch";
-import { type AdminModule } from "@/shared/api/services";
-import { createModuleAction, updateModuleAction } from "./actions";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/shared/components/ui/tabs";
+import { Textarea } from "@/shared/components/ui/textarea";
+import { registerModuleYamlAction } from "./actions";
 
-type FormState = {
-  slug: string;
-  name: string;
-  description: string;
-  icon: string;
-  github_url: string;
-  image: string;
-  port: string;
-  auth_token: string;
-  active: boolean;
-};
-
-const defaultForm: FormState = {
-  slug: "",
-  name: "",
-  description: "",
-  icon: "",
-  github_url: "",
-  image: "",
-  port: "",
-  auth_token: "",
-  active: true,
-};
-
-function moduleToForm(m: AdminModule): FormState {
-  return {
-    slug: m.slug,
-    name: m.name,
-    description: m.description ?? "",
-    icon: m.icon ?? "",
-    github_url: m.github_url ?? "",
-    image: m.image ?? "",
-    port: m.port ? String(m.port) : "",
-    auth_token: "",
-    active: m.active,
-  };
-}
+const YAML_PLACEHOLDER = `apiVersion: botmother.module/v1
+module:
+  id: demo
+  name: Demo Module
+  icon: sparkles
+source:
+  github: https://github.com/BotSpace/module-demo
+runtime:
+  dockerfile: Dockerfile
+  port: 8100`;
 
 type Props = {
-  module?: AdminModule;
+  /** edit mode uchun "module.yaml dan yangilash" ko'rinishida tugma */
+  isUpdate?: boolean;
 };
 
-export function ModuleFormDialog({ module: mod }: Props) {
+export function ModuleFormDialog({ isUpdate = false }: Props) {
   const [open, setOpen] = useState(false);
-  const [form, setForm] = useState<FormState>(mod ? moduleToForm(mod) : defaultForm);
+  const [tab, setTab] = useState<"paste" | "url">("paste");
+  const [yaml, setYaml] = useState("");
+  const [yamlUrl, setYamlUrl] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const isEdit = Boolean(mod);
-
-  function set(key: keyof FormState, value: string | boolean) {
-    setForm((prev) => ({ ...prev, [key]: value }));
+  function reset() {
+    setYaml("");
+    setYamlUrl("");
+    setTab("paste");
   }
 
   async function handle() {
-    if (!form.slug.trim()) { toast.error("Slug kiriting"); return; }
-    if (!form.name.trim()) { toast.error("Modul nomini kiriting"); return; }
+    const body =
+      tab === "paste"
+        ? { yaml: yaml.trim() }
+        : { yaml_url: yamlUrl.trim() };
+
+    if (tab === "paste" && !body.yaml) {
+      toast.error("module.yaml matnini kiriting");
+      return;
+    }
+    if (tab === "url" && !body.yaml_url) {
+      toast.error("Raw YAML URL kiriting");
+      return;
+    }
+
     setLoading(true);
-    const body = {
-      slug: form.slug.trim(),
-      name: form.name.trim(),
-      description: form.description || undefined,
-      icon: form.icon || undefined,
-      github_url: form.github_url || undefined,
-      image: form.image || undefined,
-      port: form.port ? Number(form.port) : undefined,
-      auth_token: form.auth_token || undefined,
-      active: form.active,
-    };
-    const res = isEdit
-      ? await updateModuleAction(mod!.slug, body)
-      : await createModuleAction(body);
+    const res = await registerModuleYamlAction(body);
     setLoading(false);
+
     if (res.ok) {
-      toast.success(isEdit ? "Modul yangilandi" : "Modul qo'shildi");
+      const modeLabel =
+        res.mode === "github" ? "GitHub build" : "Self-hosted";
+      toast.success(
+        isUpdate
+          ? `Modul yangilandi (${modeLabel})`
+          : `Modul qo'shildi (${modeLabel})`
+      );
       setOpen(false);
-      if (!isEdit) setForm(defaultForm);
+      reset();
     } else {
-      toast.error(res.message);
+      toast.error(res.message ?? "Xatolik yuz berdi");
     }
   }
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        {isEdit ? (
-          <Button variant="ghost" size="icon" className="h-8 w-8">
-            <Pencil className="h-4 w-4" />
+        {isUpdate ? (
+          <Button variant="outline" size="sm">
+            <RefreshCw className="h-4 w-4 mr-1.5" />
+            YAML dan yangilash
           </Button>
         ) : (
           <Button size="sm">
@@ -113,93 +96,80 @@ export function ModuleFormDialog({ module: mod }: Props) {
         )}
       </DialogTrigger>
       <DialogContent
-        className="max-w-lg max-h-[90vh] overflow-y-auto"
-        // Don't dismiss while filling the form (outside click / opening click).
+        className="max-w-lg"
+        // Paste paytida tashqi klik yopmasin
         onPointerDownOutside={(e) => e.preventDefault()}
         onInteractOutside={(e) => e.preventDefault()}
       >
         <DialogHeader>
-          <DialogTitle>{isEdit ? "Modulni tahrirlash" : "Yangi modul"}</DialogTitle>
+          <DialogTitle>
+            {isUpdate ? "YAML dan yangilash" : "Yangi modul qo'shish"}
+          </DialogTitle>
         </DialogHeader>
-        <div className="grid grid-cols-2 gap-4 py-2">
-          <div className="space-y-1">
-            <Label>Slug <span className="text-destructive">*</span></Label>
-            <Input
-              value={form.slug}
-              onChange={(e) => set("slug", e.target.value)}
-              placeholder="my-module"
-              disabled={isEdit}
+
+        <Tabs value={tab} onValueChange={(v) => setTab(v as "paste" | "url")}>
+          <TabsList className="w-full">
+            <TabsTrigger value="paste" className="flex-1">
+              YAML paste
+            </TabsTrigger>
+            <TabsTrigger value="url" className="flex-1">
+              URL
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="paste" className="mt-4 space-y-2">
+            <Label>
+              module.yaml matni{" "}
+              <span className="text-destructive">*</span>
+            </Label>
+            <Textarea
+              value={yaml}
+              onChange={(e) => setYaml(e.target.value)}
+              placeholder={YAML_PLACEHOLDER}
+              className="font-mono text-xs min-h-52 resize-y"
+              spellCheck={false}
             />
-          </div>
-          <div className="space-y-1">
-            <Label>Nomi <span className="text-destructive">*</span></Label>
+            <p className="text-xs text-muted-foreground">
+              GitHub reposi bo&apos;lsa platforma o&apos;zi build qiladi.
+              Self-hosted bo&apos;lsa{" "}
+              <code className="bg-muted px-1 rounded">source.endpoint</code> ko&apos;rsating.
+            </p>
+          </TabsContent>
+
+          <TabsContent value="url" className="mt-4 space-y-2">
+            <Label>
+              Raw module.yaml URL{" "}
+              <span className="text-destructive">*</span>
+            </Label>
             <Input
-              value={form.name}
-              onChange={(e) => set("name", e.target.value)}
-              placeholder="My Module"
+              value={yamlUrl}
+              onChange={(e) => setYamlUrl(e.target.value)}
+              placeholder="https://raw.githubusercontent.com/org/repo/main/module.yaml"
+              type="url"
             />
-          </div>
-          <div className="col-span-2 space-y-1">
-            <Label>Tavsif</Label>
-            <Input
-              value={form.description}
-              onChange={(e) => set("description", e.target.value)}
-              placeholder="Modul haqida qisqacha..."
-            />
-          </div>
-          <div className="space-y-1">
-            <Label>Icon (emoji yoki URL)</Label>
-            <Input
-              value={form.icon}
-              onChange={(e) => set("icon", e.target.value)}
-              placeholder="🤖 yoki https://..."
-            />
-          </div>
-          <div className="space-y-1">
-            <Label>Port</Label>
-            <Input
-              type="number"
-              value={form.port}
-              onChange={(e) => set("port", e.target.value)}
-              placeholder="3000"
-            />
-          </div>
-          <div className="col-span-2 space-y-1">
-            <Label>GitHub URL</Label>
-            <Input
-              value={form.github_url}
-              onChange={(e) => set("github_url", e.target.value)}
-              placeholder="https://github.com/..."
-            />
-          </div>
-          <div className="col-span-2 space-y-1">
-            <Label>Image (Docker)</Label>
-            <Input
-              value={form.image}
-              onChange={(e) => set("image", e.target.value)}
-              placeholder="ghcr.io/org/image:latest"
-            />
-          </div>
-          <div className="col-span-2 space-y-1">
-            <Label>Auth token</Label>
-            <Input
-              type="password"
-              value={form.auth_token}
-              onChange={(e) => set("auth_token", e.target.value)}
-              placeholder={isEdit ? "O'zgartirmaslik uchun bo'sh qoldiring" : ""}
-            />
-          </div>
-          <div className="flex items-center gap-3">
-            <Switch checked={form.active} onCheckedChange={(v) => set("active", v)} />
-            <Label>Faol</Label>
-          </div>
-        </div>
+            <p className="text-xs text-muted-foreground">
+              GitHub raw URL yoki to&apos;g&apos;ridan yuklab olinadigan YAML havolasi.
+            </p>
+          </TabsContent>
+        </Tabs>
+
         <DialogFooter>
-          <Button variant="outline" onClick={() => setOpen(false)} disabled={loading}>
+          <Button
+            variant="outline"
+            onClick={() => {
+              setOpen(false);
+              reset();
+            }}
+            disabled={loading}
+          >
             Bekor qilish
           </Button>
           <Button onClick={handle} disabled={loading}>
-            {loading ? "Saqlanmoqda..." : isEdit ? "Saqlash" : "Yaratish"}
+            {loading
+              ? "Yuklanmoqda..."
+              : isUpdate
+              ? "Yangilash"
+              : "Qo'shish"}
           </Button>
         </DialogFooter>
       </DialogContent>

@@ -1028,4 +1028,12 @@ export const AdminAPI = {
   async refreshModuleManifest(slug: string): Promise<void> {
     await api<unknown>(`/api/modules/${slug}/refresh-manifest/`, { method: "POST" });
   },
+
+  // Register (create or update) a module from a module.yaml — no envelope.
+  async registerModuleYaml(body: {
+    yaml?: string;
+    yaml_url?: string;
+  }): Promise<{ ok: boolean; mode: "github" | "endpoint"; module: AdminModule; build_job?: unknown; manifest?: unknown }> {
+    return api("/api/modules/register-yaml/", { method: "POST", json: body });
+  },
 };
