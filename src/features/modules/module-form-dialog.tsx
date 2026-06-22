@@ -112,7 +112,12 @@ export function ModuleFormDialog({ module: mod }: Props) {
           </Button>
         )}
       </DialogTrigger>
-      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+      <DialogContent
+        className="max-w-lg max-h-[90vh] overflow-y-auto"
+        // Don't dismiss while filling the form (outside click / opening click).
+        onPointerDownOutside={(e) => e.preventDefault()}
+        onInteractOutside={(e) => e.preventDefault()}
+      >
         <DialogHeader>
           <DialogTitle>{isEdit ? "Modulni tahrirlash" : "Yangi modul"}</DialogTitle>
         </DialogHeader>
