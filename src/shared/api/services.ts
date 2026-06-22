@@ -483,12 +483,26 @@ export type AdminModule = {
   description: string;
   icon: string;
   image: string;
+  github_url: string;
   port: number;
   active: boolean;
   manifest_fetched_at: string | null;
+  manifest_cache?: unknown;
   created_at: string;
   nodes: AdminModuleNode[];
   docs: string;
+};
+
+export type AdminModuleInput = {
+  slug: string;
+  name: string;
+  description?: string;
+  icon?: string;
+  github_url?: string;
+  image?: string;
+  port?: number;
+  auth_token?: string;
+  active?: boolean;
 };
 
 // ── AdminAPI namespace ─────────────────────────────────────────────────────
@@ -986,10 +1000,28 @@ export const AdminAPI = {
   },
 
   // External modules catalog (ModuleViewSet — plain DRF pagination, no envelope)
-  async modules(): Promise<AdminModule[]> {
-    const raw = await api<{ results?: AdminModule[] } | AdminModule[]>("/api/modules/");
+  async modules(params?: { search?: string; active?: string }): Promise<AdminModule[]> {
+    const raw = await api<{ results?: AdminModule[] } | AdminModule[]>("/api/modules/", {
+      query: params as Record<string, string | undefined>,
+    });
     if (Array.isArray(raw)) return raw;
     return raw.results ?? [];
+  },
+
+  async module(slug: string): Promise<AdminModule> {
+    return api<AdminModule>(`/api/modules/${slug}/`);
+  },
+
+  async createModule(body: AdminModuleInput): Promise<AdminModule> {
+    return api<AdminModule>("/api/modules/", { method: "POST", json: body });
+  },
+
+  async updateModule(slug: string, body: Partial<AdminModuleInput>): Promise<AdminModule> {
+    return api<AdminModule>(`/api/modules/${slug}/`, { method: "PATCH", json: body });
+  },
+
+  async deleteModule(slug: string): Promise<void> {
+    await api<void>(`/api/modules/${slug}/`, { method: "DELETE" });
   },
 
   // Re-fetch a module's manifest from its running pod (admin-only).
