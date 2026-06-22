@@ -1,5 +1,5 @@
 "use client";
-import { useState, useTransition } from "react";
+import { useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Trash2 } from "lucide-react";
@@ -26,6 +26,22 @@ export function DeleteModuleButton({ slug, name, redirectAfter }: Props) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [, startTransition] = useTransition();
+  // Timestamp of the opening click — used to swallow the spurious onOpenChange
+  // (false) that Radix fires in the same tick as the opening click (the dialog
+  // would otherwise flash open and immediately close).
+  const openedAtRef = useRef(0);
+
+  function openDialog(e: React.MouseEvent) {
+    e.preventDefault();
+    e.stopPropagation();
+    openedAtRef.current = Date.now();
+    setOpen(true);
+  }
+
+  function handleOpenChange(next: boolean) {
+    if (!next && Date.now() - openedAtRef.current < 300) return; // ignore instant close
+    setOpen(next);
+  }
 
   async function handle() {
     setLoading(true);
@@ -45,23 +61,17 @@ export function DeleteModuleButton({ slug, name, redirectAfter }: Props) {
 
   return (
     <>
-      {/* Self-controlled dialog: stopPropagation so a clickable row / parent
-          doesn't swallow the click and instantly re-close the dialog. */}
       <Button
         type="button"
         variant="ghost"
         size="icon"
         className="h-8 w-8 text-destructive hover:text-destructive"
-        onClick={(e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          setOpen(true);
-        }}
+        onClick={openDialog}
       >
         <Trash2 className="h-4 w-4" />
       </Button>
 
-      <Dialog open={open} onOpenChange={setOpen}>
+      <Dialog open={open} onOpenChange={handleOpenChange}>
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>{`"${name}" modulini o'chirish`}</DialogTitle>
