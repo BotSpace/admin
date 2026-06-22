@@ -20,6 +20,7 @@ import {
   Settings2,
   Newspaper,
   Puzzle,
+  KeyRound,
 } from "lucide-react";
 import { cn } from "@/shared/lib/utils";
 import { useState } from "react";
@@ -84,6 +85,11 @@ const NAV: NavItem[] = [
     label: "Modullar",
     href: "/modules",
     icon: <Puzzle className="h-4 w-4" />,
+  },
+  {
+    label: "Credential turlari",
+    href: "/credential-types",
+    icon: <KeyRound className="h-4 w-4" />,
   },
   {
     label: "Broadcast",

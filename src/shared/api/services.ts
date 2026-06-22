@@ -508,6 +508,45 @@ export type AdminModuleInput = {
   active?: boolean;
 };
 
+// ── Credential type types ──────────────────────────────────────────────────
+
+export type CredentialFieldOption = {
+  value: string;
+  label: string;
+};
+
+export type CredentialField = {
+  name: string;
+  label: string;
+  type: "text" | "password" | "number" | "textarea" | "select" | "url" | "switch";
+  secret?: boolean;
+  required?: boolean;
+  default?: string | number | boolean;
+  options?: CredentialFieldOption[];
+};
+
+export type CredentialType = {
+  key: string;
+  label: string;
+  icon?: string;
+  color?: string;
+  mode: "bearer" | "apikey" | "basic" | "header" | "oauth2" | "none";
+  fields: CredentialField[];
+  source: "code" | "admin" | `module:${string}`;
+  editable: boolean;
+};
+
+export type CredentialTypeInput = {
+  key: string;
+  label: string;
+  icon?: string;
+  color?: string;
+  mode: CredentialType["mode"];
+  fields: CredentialField[];
+};
+
+export type CredentialTypePatch = Partial<Omit<CredentialTypeInput, "key">>;
+
 // ── AdminAPI namespace ─────────────────────────────────────────────────────
 
 export const AdminAPI = {
@@ -1043,5 +1082,36 @@ export const AdminAPI = {
     yaml_url?: string;
   }): Promise<{ ok: boolean; mode: "github" | "endpoint"; module: AdminModule; build_job?: unknown; manifest?: unknown }> {
     return api("/api/modules/register-yaml/", { method: "POST", json: body });
+  },
+
+  // Credential types
+  async credentialTypes(params?: { source?: string }): Promise<CredentialType[]> {
+    const raw = await api<Envelope<CredentialType[]> | CredentialType[]>(
+      "/api/v1/credentials/types/",
+      { query: params as Record<string, string | undefined> }
+    );
+    if (Array.isArray(raw)) return raw;
+    const e = raw as Envelope<CredentialType[]>;
+    return e.data ?? [];
+  },
+
+  async createCredentialType(body: CredentialTypeInput): Promise<CredentialType> {
+    const raw = await api<Envelope<CredentialType>>("/api/v1/credentials/types/", {
+      method: "POST",
+      json: body,
+    });
+    return unwrap(raw);
+  },
+
+  async updateCredentialType(key: string, body: CredentialTypePatch): Promise<CredentialType> {
+    const raw = await api<Envelope<CredentialType>>(`/api/v1/credentials/types/${key}/`, {
+      method: "PATCH",
+      json: body,
+    });
+    return unwrap(raw);
+  },
+
+  async deleteCredentialType(key: string): Promise<void> {
+    await api<void>(`/api/v1/credentials/types/${key}/`, { method: "DELETE" });
   },
 };
