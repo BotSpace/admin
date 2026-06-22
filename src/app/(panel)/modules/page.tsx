@@ -13,6 +13,7 @@ import { ModulesFilter } from "@/features/modules/modules-filter";
 import { ModuleFormDialog } from "@/features/modules/module-form-dialog";
 import { DeleteModuleButton } from "@/features/modules/delete-module-button";
 import { RefreshManifestButton } from "@/features/modules/refresh-manifest-button";
+import { ModuleStatusBadge } from "@/features/modules/module-status-badge";
 
 function formatDate(iso: string | null): string {
   if (!iso) return "—";
@@ -105,9 +106,12 @@ export default async function ModulesPage({
                     )}
                   </TableCell>
                   <TableCell>
-                    <Badge variant={m.active ? "success" : "secondary"}>
-                      {m.active ? "Faol" : "Nofaol"}
-                    </Badge>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <Badge variant={m.active ? "success" : "secondary"}>
+                        {m.active ? "Faol" : "Nofaol"}
+                      </Badge>
+                      {m.active && <ModuleStatusBadge slug={m.slug} />}
+                    </div>
                   </TableCell>
                   <TableCell className="text-xs text-muted-foreground">
                     {formatDate(m.manifest_fetched_at)}

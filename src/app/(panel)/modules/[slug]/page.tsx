@@ -13,6 +13,7 @@ import {
 import { RefreshManifestButton } from "@/features/modules/refresh-manifest-button";
 import { ModuleFormDialog } from "@/features/modules/module-form-dialog";
 import { DeleteModuleButton } from "@/features/modules/delete-module-button";
+import { ModuleStatusBadge } from "@/features/modules/module-status-badge";
 import { MarkdownPreview } from "@/features/blog/markdown-preview";
 import { ChevronLeft, ExternalLink, Github } from "lucide-react";
 import { Button } from "@/shared/components/ui/button";
@@ -58,6 +59,14 @@ export default async function ModuleDetailPage({ params }: PageProps) {
       ? `Self-hosted${sourceEndpoint ? `: ${sourceEndpoint}` : ""}`
       : null;
 
+  // SSR holati (initial render uchun)
+  let initialStatus = null;
+  try {
+    initialStatus = await AdminAPI.moduleStatus(slug);
+  } catch {
+    // polling orqali keyinchalik yuklanadi
+  }
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -75,6 +84,7 @@ export default async function ModuleDetailPage({ params }: PageProps) {
               <Badge variant={mod.active ? "success" : "secondary"}>
                 {mod.active ? "Faol" : "Nofaol"}
               </Badge>
+              {mod.active && <ModuleStatusBadge slug={mod.slug} size="md" />}
               {sourceModeLabel && (
                 <Badge variant="outline" className="font-mono text-xs">
                   {sourceModeLabel}
@@ -95,7 +105,67 @@ export default async function ModuleDetailPage({ params }: PageProps) {
       </div>
 
       {/* Meta info */}
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
+        {/* Jonli holat kartochkasi */}
+        <div className="rounded-lg border bg-card p-4 space-y-2 sm:col-span-2 lg:col-span-2">
+          <p className="text-xs text-muted-foreground">Holat</p>
+          <div className="flex items-center gap-2 flex-wrap">
+            <ModuleStatusBadge slug={mod.slug} size="md" />
+          </div>
+          {/* Pod / endpoint qo'shimcha ma'lumot */}
+          {initialStatus && (
+            <div className="text-xs text-muted-foreground space-y-0.5 pt-1">
+              {initialStatus.mode === "github" ? (
+                <>
+                  {initialStatus.pod && (
+                    <p>
+                      Pod:{" "}
+                      <span className="font-medium">
+                        {initialStatus.pod === "running"
+                          ? "ishlamoqda"
+                          : initialStatus.pod === "init"
+                          ? "ishga tushmoqda"
+                          : "toʻxtagan"}
+                      </span>
+                    </p>
+                  )}
+                  {initialStatus.build && initialStatus.build.status !== "none" && (
+                    <p>
+                      Build:{" "}
+                      <span className="font-medium">
+                        {initialStatus.build.status === "succeeded"
+                          ? "muvaffaqiyatli"
+                          : initialStatus.build.status === "failed"
+                          ? "xato"
+                          : initialStatus.build.status === "running"
+                          ? "jarayonda"
+                          : initialStatus.build.status}
+                      </span>
+                      {initialStatus.build.at && (
+                        <span className="ml-1 opacity-70">
+                          ({formatDate(initialStatus.build.at)})
+                        </span>
+                      )}
+                    </p>
+                  )}
+                </>
+              ) : (
+                <>
+                  {initialStatus.endpoint && (
+                    <p className="font-mono truncate">{initialStatus.endpoint}</p>
+                  )}
+                  <p>
+                    Javob bermoqda:{" "}
+                    <span className={initialStatus.reachable ? "text-emerald-600" : "text-destructive"}>
+                      {initialStatus.reachable ? "ha" : "yoʼq"}
+                    </span>
+                  </p>
+                </>
+              )}
+            </div>
+          )}
+        </div>
+
         <div className="rounded-lg border bg-card p-4 space-y-1">
           <p className="text-xs text-muted-foreground">Port</p>
           <p className="font-mono font-medium">{mod.port || "—"}</p>
@@ -108,6 +178,10 @@ export default async function ModuleDetailPage({ params }: PageProps) {
           <p className="text-xs text-muted-foreground">Manifest olingan</p>
           <p className="text-sm">{formatDate(mod.manifest_fetched_at)}</p>
         </div>
+      </div>
+
+      {/* Yaratilgan / yangilangan */}
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
         <div className="rounded-lg border bg-card p-4 space-y-1">
           <p className="text-xs text-muted-foreground">Yaratilgan</p>
           <p className="text-sm">{formatDate(mod.created_at)}</p>

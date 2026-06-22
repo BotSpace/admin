@@ -469,6 +469,9 @@ export type MeResponse = {
   is_superuser: boolean;
 };
 
+// Re-export for server-side usage (client-side import module-status.ts directly)
+export type { ModuleStatus } from "./module-status";
+
 export type AdminModuleNode = {
   type: string;
   title: string;
@@ -1022,6 +1025,11 @@ export const AdminAPI = {
 
   async deleteModule(slug: string): Promise<void> {
     await api<void>(`/api/modules/${slug}/`, { method: "DELETE" });
+  },
+
+  // Modul real-time holati (SSR uchun; client polling uchun module-status.ts ishlatilsin)
+  async moduleStatus(slug: string): Promise<import("./module-status").ModuleStatus> {
+    return api<import("./module-status").ModuleStatus>(`/api/modules/${slug}/status/`);
   },
 
   // Re-fetch a module's manifest from its running pod (admin-only).
