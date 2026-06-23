@@ -31,21 +31,25 @@ runtime:
 type Props = {
   /** edit mode uchun "module.yaml dan yangilash" ko'rinishida tugma */
   isUpdate?: boolean;
+  /** github-mode modulni yangilashda repo URL oldindan to'ldiriladi */
+  defaultRepoUrl?: string;
 };
 
-export function ModuleFormDialog({ isUpdate = false }: Props) {
+export function ModuleFormDialog({ isUpdate = false, defaultRepoUrl }: Props) {
   const [open, setOpen] = useState(false);
-  const [tab, setTab] = useState<"paste" | "url" | "github">("paste");
+  const [tab, setTab] = useState<"paste" | "url" | "github">(
+    defaultRepoUrl ? "github" : "paste"
+  );
   const [yaml, setYaml] = useState("");
   const [yamlUrl, setYamlUrl] = useState("");
-  const [repoUrl, setRepoUrl] = useState("");
+  const [repoUrl, setRepoUrl] = useState(defaultRepoUrl ?? "");
   const [loading, setLoading] = useState(false);
 
   function reset() {
     setYaml("");
     setYamlUrl("");
-    setRepoUrl("");
-    setTab("paste");
+    setRepoUrl(defaultRepoUrl ?? "");
+    setTab(defaultRepoUrl ? "github" : "paste");
   }
 
   async function handle() {

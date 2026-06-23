@@ -101,7 +101,7 @@ export default async function ModuleDetailPage({ params }: PageProps) {
         <div className="flex items-center gap-2 shrink-0">
           <ToggleModuleActiveButton slug={mod.slug} active={mod.active} variant="labeled" />
           <RefreshManifestButton slug={mod.slug} />
-          <ModuleFormDialog isUpdate />
+          <ModuleFormDialog isUpdate defaultRepoUrl={mod.github_url || undefined} />
           <DeleteModuleButton slug={mod.slug} name={mod.name} redirectAfter />
         </div>
       </div>
