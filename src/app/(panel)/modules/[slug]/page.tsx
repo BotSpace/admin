@@ -14,6 +14,7 @@ import { RefreshManifestButton } from "@/features/modules/refresh-manifest-butto
 import { ModuleFormDialog } from "@/features/modules/module-form-dialog";
 import { DeleteModuleButton } from "@/features/modules/delete-module-button";
 import { ModuleStatusBadge } from "@/features/modules/module-status-badge";
+import { ToggleModuleActiveButton } from "@/features/modules/toggle-module-active-button";
 import { MarkdownPreview } from "@/features/blog/markdown-preview";
 import { ChevronLeft, ExternalLink, Github } from "lucide-react";
 import { Button } from "@/shared/components/ui/button";
@@ -98,6 +99,7 @@ export default async function ModuleDetailPage({ params }: PageProps) {
           </div>
         </div>
         <div className="flex items-center gap-2 shrink-0">
+          <ToggleModuleActiveButton slug={mod.slug} active={mod.active} variant="labeled" />
           <RefreshManifestButton slug={mod.slug} />
           <ModuleFormDialog isUpdate />
           <DeleteModuleButton slug={mod.slug} name={mod.name} redirectAfter />

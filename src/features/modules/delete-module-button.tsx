@@ -81,9 +81,17 @@ export function DeleteModuleButton({ slug, name, redirectAfter }: Props) {
         >
           <DialogHeader>
             <DialogTitle>{`"${name}" modulini o'chirish`}</DialogTitle>
-            <DialogDescription>
-              Bu modul o&apos;chirilsa barcha unga bog&apos;liq sozlamalar ham
-              o&apos;chiriladi. Davom etasizmi?
+            <DialogDescription asChild>
+              <div className="space-y-2">
+                <p>
+                  Bu modul o&apos;chirilsa barcha unga bog&apos;liq sozlamalar ham
+                  o&apos;chiriladi.
+                </p>
+                <p className="text-destructive font-medium">
+                  Diqqat: modul Kubernetes&apos;dan ham o&apos;chib ketadi (pod, servis va
+                  barcha resurslar). Bu amalni qaytarib bo&apos;lmaydi.
+                </p>
+              </div>
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>

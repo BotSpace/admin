@@ -14,6 +14,7 @@ import { ModuleFormDialog } from "@/features/modules/module-form-dialog";
 import { DeleteModuleButton } from "@/features/modules/delete-module-button";
 import { RefreshManifestButton } from "@/features/modules/refresh-manifest-button";
 import { ModuleStatusBadge } from "@/features/modules/module-status-badge";
+import { ToggleModuleActiveButton } from "@/features/modules/toggle-module-active-button";
 
 function formatDate(iso: string | null): string {
   if (!iso) return "—";
@@ -107,6 +108,7 @@ export default async function ModulesPage({
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-2 flex-wrap">
+                      <ToggleModuleActiveButton slug={m.slug} active={m.active} />
                       <Badge variant={m.active ? "success" : "secondary"}>
                         {m.active ? "Faol" : "Nofaol"}
                       </Badge>

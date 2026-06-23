@@ -59,3 +59,14 @@ export async function deleteModuleAction(slug: string) {
     return { ok: false, message: isApiError(e) ? e.message : "Xatolik yuz berdi" };
   }
 }
+
+export async function setModuleActiveAction(slug: string, active: boolean) {
+  try {
+    await AdminAPI.updateModule(slug, { active });
+    revalidatePath("/modules");
+    revalidatePath(`/modules/${slug}`);
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, message: isApiError(e) ? e.message : "Xatolik yuz berdi" };
+  }
+}
