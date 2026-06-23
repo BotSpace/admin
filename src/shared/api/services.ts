@@ -1084,6 +1084,13 @@ export const AdminAPI = {
     return api("/api/modules/register-yaml/", { method: "POST", json: body });
   },
 
+  // Register a module from a GitHub repo URL — backend fetches module.yaml automatically.
+  async registerModuleGithub(body: {
+    repo_url: string;
+  }): Promise<{ ok: boolean; mode: "github" | "endpoint"; module: AdminModule; build_job?: string; warning?: string }> {
+    return api("/api/modules/register-github/", { method: "POST", json: body });
+  },
+
   // Credential types
   async credentialTypes(params?: { source?: string }): Promise<CredentialType[]> {
     const raw = await api<Envelope<CredentialType[]> | CredentialType[]>(

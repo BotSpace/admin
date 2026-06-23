@@ -29,6 +29,20 @@ export async function registerModuleYamlAction(body: { yaml?: string; yaml_url?:
   }
 }
 
+export async function registerModuleGithubAction(body: { repo_url: string }) {
+  try {
+    const res = await AdminAPI.registerModuleGithub(body);
+    revalidatePath("/modules");
+    if (res.module?.slug) revalidatePath(`/modules/${res.module.slug}`);
+    return { ok: true, mode: res.mode, slug: res.module?.slug, build_job: res.build_job, warning: res.warning };
+  } catch (e) {
+    if (isApiError(e)) {
+      return { ok: false, message: e.message };
+    }
+    return { ok: false, message: "Xatolik yuz berdi" };
+  }
+}
+
 export async function createModuleAction(body: AdminModuleInput) {
   try {
     await AdminAPI.createModule(body);
