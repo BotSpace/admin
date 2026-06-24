@@ -124,8 +124,7 @@ export default async function MonitoringPage({
               cell: (row) => (
                 <Link
                   href={`/users/${row.owner_id}`}
-                  className="text-sm text-primary hover:underline"
-                  onClick={(e) => e.stopPropagation()}
+                  className="relative z-10 text-sm text-primary hover:underline"
                 >
                   {row.owner_name || row.owner_phone || `#${row.owner_id}`}
                 </Link>
