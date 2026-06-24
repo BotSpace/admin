@@ -15,6 +15,7 @@ import { ModuleFormDialog } from "@/features/modules/module-form-dialog";
 import { DeleteModuleButton } from "@/features/modules/delete-module-button";
 import { ModuleStatusBadge } from "@/features/modules/module-status-badge";
 import { ToggleModuleActiveButton } from "@/features/modules/toggle-module-active-button";
+import { ToggleModuleDefaultButton, ModuleDefaultBadge } from "@/features/modules/toggle-module-default-button";
 import { MarkdownPreview } from "@/features/blog/markdown-preview";
 import { ChevronLeft, ExternalLink, Github } from "lucide-react";
 import { Button } from "@/shared/components/ui/button";
@@ -86,6 +87,7 @@ export default async function ModuleDetailPage({ params }: PageProps) {
                 {mod.active ? "Faol" : "Nofaol"}
               </Badge>
               {mod.active && <ModuleStatusBadge slug={mod.slug} size="md" />}
+              <ModuleDefaultBadge isDefault={!!mod.is_default} />
               {sourceModeLabel && (
                 <Badge variant="outline" className="font-mono text-xs">
                   {sourceModeLabel}
@@ -100,6 +102,7 @@ export default async function ModuleDetailPage({ params }: PageProps) {
         </div>
         <div className="flex items-center gap-2 shrink-0">
           <ToggleModuleActiveButton slug={mod.slug} active={mod.active} variant="labeled" />
+          <ToggleModuleDefaultButton slug={mod.slug} isDefault={!!mod.is_default} variant="labeled" />
           <RefreshManifestButton slug={mod.slug} />
           <ModuleFormDialog isUpdate defaultRepoUrl={mod.github_url || undefined} />
           <DeleteModuleButton slug={mod.slug} name={mod.name} redirectAfter />

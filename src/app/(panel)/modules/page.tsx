@@ -15,6 +15,7 @@ import { DeleteModuleButton } from "@/features/modules/delete-module-button";
 import { RefreshManifestButton } from "@/features/modules/refresh-manifest-button";
 import { ModuleStatusBadge } from "@/features/modules/module-status-badge";
 import { ToggleModuleActiveButton } from "@/features/modules/toggle-module-active-button";
+import { ToggleModuleDefaultButton, ModuleDefaultBadge } from "@/features/modules/toggle-module-default-button";
 
 function formatDate(iso: string | null): string {
   if (!iso) return "—";
@@ -78,6 +79,7 @@ export default async function ModulesPage({
                 <TableHead>Slug</TableHead>
                 <TableHead>Node&apos;lar</TableHead>
                 <TableHead>Holat</TableHead>
+                <TableHead>Default</TableHead>
                 <TableHead>Manifest olingan</TableHead>
                 <TableHead className="w-36"></TableHead>
               </TableRow>
@@ -113,6 +115,12 @@ export default async function ModulesPage({
                         {m.active ? "Faol" : "Nofaol"}
                       </Badge>
                       {m.active && <ModuleStatusBadge slug={m.slug} />}
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-2">
+                      <ToggleModuleDefaultButton slug={m.slug} isDefault={!!m.is_default} />
+                      <ModuleDefaultBadge isDefault={!!m.is_default} />
                     </div>
                   </TableCell>
                   <TableCell className="text-xs text-muted-foreground">

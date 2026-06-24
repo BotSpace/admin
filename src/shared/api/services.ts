@@ -489,6 +489,7 @@ export type AdminModule = {
   github_url: string;
   port: number;
   active: boolean;
+  is_default: boolean;
   manifest_fetched_at: string | null;
   manifest_cache?: unknown;
   created_at: string;
@@ -506,6 +507,7 @@ export type AdminModuleInput = {
   port?: number;
   auth_token?: string;
   active?: boolean;
+  is_default?: boolean;
 };
 
 // ── Credential type types ──────────────────────────────────────────────────

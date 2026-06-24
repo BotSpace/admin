@@ -84,3 +84,14 @@ export async function setModuleActiveAction(slug: string, active: boolean) {
     return { ok: false, message: isApiError(e) ? e.message : "Xatolik yuz berdi" };
   }
 }
+
+export async function setModuleDefaultAction(slug: string, is_default: boolean) {
+  try {
+    await AdminAPI.updateModule(slug, { is_default });
+    revalidatePath("/modules");
+    revalidatePath(`/modules/${slug}`);
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, message: isApiError(e) ? e.message : "Xatolik yuz berdi" };
+  }
+}
