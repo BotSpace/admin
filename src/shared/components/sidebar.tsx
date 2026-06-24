@@ -21,6 +21,7 @@ import {
   Newspaper,
   Puzzle,
   KeyRound,
+  Activity,
 } from "lucide-react";
 import { cn } from "@/shared/lib/utils";
 import { useState } from "react";
@@ -47,6 +48,11 @@ const NAV: NavItem[] = [
     label: "Loyihalar",
     href: "/projects",
     icon: <FolderOpen className="h-4 w-4" />,
+  },
+  {
+    label: "Monitoring",
+    href: "/monitoring",
+    icon: <Activity className="h-4 w-4" />,
   },
   {
     label: "Shablonlar",

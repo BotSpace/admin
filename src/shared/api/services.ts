@@ -510,6 +510,41 @@ export type AdminModuleInput = {
   is_default?: boolean;
 };
 
+// ── Monitoring types ───────────────────────────────────────────────────────
+
+export type AdminProjectUsage = {
+  id: number;
+  name: string;
+  username: string | null;
+  owner_id: number;
+  owner_phone: string | null;
+  owner_name: string | null;
+  release_status: string | null;
+  cpu_cores: number | null;
+  memory_bytes: number | null;
+  disk_bytes: number;
+  created_at: string;
+};
+
+export type MonitoringPage = Page<AdminProjectUsage> & {
+  prometheus_available: boolean;
+};
+
+export type MonitoringHistorySeries = {
+  cpu_cores: [number, number][];
+  memory_bytes: [number, number][];
+  net_rx_bps: [number, number][];
+  net_tx_bps: [number, number][];
+  disk_bytes: [number, number][];
+};
+
+export type MonitoringHistory = {
+  range: string;
+  step: string;
+  prometheus_available: boolean;
+  series: MonitoringHistorySeries;
+};
+
 // ── Credential type types ──────────────────────────────────────────────────
 
 export type CredentialFieldOption = {
@@ -1091,6 +1126,32 @@ export const AdminAPI = {
     repo_url: string;
   }): Promise<{ ok: boolean; mode: "github" | "endpoint"; module: AdminModule; build_job?: string; warning?: string }> {
     return api("/api/modules/register-github/", { method: "POST", json: body });
+  },
+
+  // Monitoring
+  async monitoring(params?: {
+    search?: string;
+    owner?: string;
+    is_template?: string;
+    has_release?: string;
+    ordering?: string;
+    page?: number;
+    page_size?: number;
+  }): Promise<MonitoringPage> {
+    type RawPage = Page<AdminProjectUsage> & { prometheus_available?: boolean };
+    const raw = await api<Envelope<RawPage>>("/api/v1/admin/monitoring/", {
+      query: params as Record<string, string | number | boolean | undefined | null>,
+    });
+    const page = unwrap(raw);
+    return { ...page, prometheus_available: page.prometheus_available ?? false };
+  },
+
+  async monitoringHistory(id: number, range?: string): Promise<MonitoringHistory> {
+    const raw = await api<Envelope<MonitoringHistory>>(
+      `/api/v1/admin/monitoring/${id}/history/`,
+      { query: range ? { range } : undefined }
+    );
+    return unwrap(raw);
   },
 
   // Credential types
