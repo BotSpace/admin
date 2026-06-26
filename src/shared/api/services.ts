@@ -42,6 +42,7 @@ export type AdminUser = {
   role: string;
   balance: number;
   template_balance: string;
+  tokens_used_total: number;
   is_active: boolean;
   is_staff: boolean;
   is_superuser: boolean;

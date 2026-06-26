@@ -156,6 +156,15 @@ export default async function UsersPage({
               ),
             },
             {
+              key: "tokens_used_total",
+              header: "Tokenlar",
+              cell: (u) => (
+                <span className="font-mono text-sm">
+                  {(u.tokens_used_total ?? 0).toLocaleString("uz-UZ")}
+                </span>
+              ),
+            },
+            {
               key: "status",
               header: "Holat",
               cell: (u) => (

@@ -267,6 +267,8 @@ export function UsersFilter({
                   <SelectItem value="date_joined">Eski → yangi</SelectItem>
                   <SelectItem value="balance">Balans ↑</SelectItem>
                   <SelectItem value="-balance">Balans ↓</SelectItem>
+                  <SelectItem value="-tokens_used_total">Tokens ko&apos;p</SelectItem>
+                  <SelectItem value="tokens_used_total">Tokens kam</SelectItem>
                   <SelectItem value="-id">ID ↓</SelectItem>
                   <SelectItem value="id">ID ↑</SelectItem>
                 </SelectContent>
