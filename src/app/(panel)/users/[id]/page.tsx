@@ -212,22 +212,20 @@ export default async function UserDetailPage({
                       Token sarfi (jami)
                     </p>
                     <TokenProgress
-                      used={user.subscription.tokens_used_total}
-                      total={user.subscription.token_limit}
+                      used={user.subscription.tokens_used_total ?? 0}
+                      total={user.subscription.token_limit ?? 0}
                     />
                   </div>
 
                   <dl className="grid grid-cols-2 gap-x-8 gap-y-2 text-sm">
                     <dt className="text-muted-foreground">Kirish tokenlari</dt>
                     <dd className="font-mono text-xs">
-                      {user.subscription.tokens_used_input.toLocaleString("uz-UZ")} /&nbsp;
-                      {user.subscription.max_input_tokens.toLocaleString("uz-UZ")}
+                      {(user.subscription.tokens_used_input ?? 0).toLocaleString("uz-UZ")}
                     </dd>
 
                     <dt className="text-muted-foreground">Chiqish tokenlari</dt>
                     <dd className="font-mono text-xs">
-                      {user.subscription.tokens_used_output.toLocaleString("uz-UZ")} /&nbsp;
-                      {user.subscription.max_output_tokens.toLocaleString("uz-UZ")}
+                      {(user.subscription.tokens_used_output ?? 0).toLocaleString("uz-UZ")}
                     </dd>
                   </dl>
                 </div>

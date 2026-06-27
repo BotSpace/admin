@@ -61,8 +61,6 @@ export type AdminUserSubscription = {
   tokens_used_output: number;
   tokens_used_total: number;
   token_limit: number;
-  max_input_tokens: number;
-  max_output_tokens: number;
   max_bots: number;
 };
 
