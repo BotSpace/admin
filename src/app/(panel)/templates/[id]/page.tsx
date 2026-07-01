@@ -13,6 +13,7 @@ import { VerifyToggle } from "@/features/templates/verify-toggle";
 import { TemplateEditDialog } from "@/features/templates/template-edit-dialog";
 import { SpecSection } from "@/features/templates/spec-section";
 import { ResyncButton } from "@/features/templates/resync-button";
+import { DeleteTemplateButton } from "@/features/templates/delete-template-button";
 import { TemplateVersionsCard } from "@/features/templates/template-versions-card";
 import { format } from "date-fns";
 import { ChevronLeft, ExternalLink } from "lucide-react";
@@ -93,6 +94,7 @@ export default async function TemplateDetailPage({
           <TemplateEditDialog template={template} />
           {template.has_project && <ResyncButton id={template.id} />}
           <VerifyToggle id={template.id} isVerify={template.is_verify} name={template.name} />
+          <DeleteTemplateButton id={template.id} name={template.name} />
         </div>
       </div>
 

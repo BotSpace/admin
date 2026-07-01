@@ -907,6 +907,13 @@ export const AdminAPI = {
     return unwrap(raw);
   },
 
+  async deleteTemplate(id: number, force?: boolean): Promise<void> {
+    await api(`/api/v1/admin/templates/${id}/`, {
+      method: "DELETE",
+      query: force ? { force: "true" } : undefined,
+    });
+  },
+
   async templateVersions(id: number): Promise<TemplateVersion[]> {
     const raw = await api<Envelope<TemplateVersion[]>>(`/api/v1/admin/templates/${id}/versions/`);
     return unwrap(raw);

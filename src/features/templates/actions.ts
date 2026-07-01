@@ -67,6 +67,16 @@ export async function previewTemplateSpecAction(projectId: number) {
   }
 }
 
+export async function deleteTemplateAction(id: number, force?: boolean) {
+  try {
+    await AdminAPI.deleteTemplate(id, force);
+    revalidatePath("/templates");
+    return { ok: true as const };
+  } catch (e) {
+    return { ok: false as const, message: isApiError(e) ? e.message : "Xatolik yuz berdi" };
+  }
+}
+
 export async function credentialTypesAction() {
   try {
     const data = await AdminAPI.credentialTypes();

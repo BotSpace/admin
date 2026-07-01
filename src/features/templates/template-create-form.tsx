@@ -236,7 +236,7 @@ function Step1Basic({
           </div>
 
           <div className="space-y-1.5">
-            <Label htmlFor="tpl-name">Nomi</Label>
+            <Label htmlFor="tpl-name">Nomi<span className="ml-0.5 text-destructive">*</span></Label>
             <Input
               id="tpl-name"
               value={form.name}
@@ -246,7 +246,7 @@ function Step1Basic({
           </div>
 
           <div className="space-y-1.5">
-            <Label htmlFor="tpl-short-desc">Qisqa tavsif</Label>
+            <Label htmlFor="tpl-short-desc">Qisqa tavsif<span className="ml-0.5 text-destructive">*</span></Label>
             <Input
               id="tpl-short-desc"
               value={form.short_description}
@@ -256,7 +256,7 @@ function Step1Basic({
           </div>
 
           <div className="space-y-1.5">
-            <Label htmlFor="tpl-desc">Tavsif</Label>
+            <Label htmlFor="tpl-desc">Tavsif<span className="ml-0.5 text-destructive">*</span></Label>
             <Textarea
               id="tpl-desc"
               value={form.description}
@@ -279,7 +279,7 @@ function Step1Basic({
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1.5">
-              <Label htmlFor="tpl-price">Narxi (UZS)</Label>
+              <Label htmlFor="tpl-price">Narxi (UZS)<span className="ml-0.5 text-destructive">*</span></Label>
               <Input
                 id="tpl-price"
                 type="number"
@@ -792,8 +792,14 @@ export function TemplateCreateForm({ categories }: { categories: TemplateCategor
     if (fileInputRef.current) fileInputRef.current.value = "";
   }
 
+  // Backend name/short_description/description/original_price'ni talab qiladi —
+  // UI ham shu yerda majburlaydi (aks holda oxirida 400 chiqardi).
   const stepValid: boolean[] = [
-    !!project && form.name.trim().length > 0 && form.original_price.trim().length > 0,
+    !!project &&
+      form.name.trim().length > 0 &&
+      form.short_description.trim().length > 0 &&
+      form.description.trim().length > 0 &&
+      form.original_price.trim().length > 0,
     true,
     true,
     true,
@@ -807,22 +813,29 @@ export function TemplateCreateForm({ categories }: { categories: TemplateCategor
     setStepIndex((i) => i - 1);
   }
 
+  function firstMissingField(): string | null {
+    if (!project) return "Loyihani tanlang";
+    if (!form.name.trim()) return "Shablon nomini kiriting";
+    if (!form.short_description.trim()) return "Qisqa tavsifni kiriting";
+    if (!form.description.trim()) return "Tavsifni kiriting";
+    if (!form.original_price.trim()) return "Narxni kiriting";
+    return null;
+  }
+
   function goNext() {
-    if (!stepValid[stepIndex]) return;
+    if (!stepValid[stepIndex]) {
+      const msg = firstMissingField();
+      if (msg) toast.error(msg);
+      return;
+    }
     setStepIndex((i) => Math.min(i + 1, LAST_STEP));
   }
 
   async function handleSubmit() {
-    if (!project) {
-      toast.error("Loyihani tanlang");
-      return;
-    }
-    if (!form.name.trim()) {
-      toast.error("Shablon nomini kiriting");
-      return;
-    }
-    if (!form.original_price.trim()) {
-      toast.error("Narxni kiriting");
+    const missing = firstMissingField();
+    if (missing || !project) {
+      toast.error(missing ?? "Loyihani tanlang");
+      setStepIndex(0);
       return;
     }
     setLoading(true);
@@ -938,7 +951,8 @@ export function TemplateCreateForm({ categories }: { categories: TemplateCategor
             Yaratish
           </Button>
         ) : (
-          <Button type="button" onClick={goNext} disabled={!stepValid[stepIndex]} className="gap-1.5">
+          // disabled emas — bosilganda qaysi maydon yetishmayotgani toast'da aytiladi
+          <Button type="button" onClick={goNext} className="gap-1.5">
             Keyingi
             <ArrowRight className="h-4 w-4" />
           </Button>

@@ -135,9 +135,13 @@ function NavLink({ item }: { item: NavItem }) {
   });
 
   if (item.children) {
-    const isChildActive = item.children.some(
-      (c) => pathname === c.href || pathname.startsWith(c.href + "/")
+    const matches = (href: string) => pathname === href || pathname.startsWith(href + "/");
+    // Eng aniq (uzun) mos href g'olib — /templates/submissions'da /templates yonmasin.
+    const bestHref = item.children.reduce<string | null>(
+      (best, c) => (matches(c.href) && (!best || c.href.length > best.length) ? c.href : best),
+      null
     );
+    const isChildActive = bestHref !== null;
     return (
       <div>
         <button
@@ -156,7 +160,7 @@ function NavLink({ item }: { item: NavItem }) {
         {open && (
           <div className="ml-7 mt-1 space-y-1 border-l border-sidebar-border pl-3">
             {item.children.map((child) => {
-              const active = pathname === child.href || pathname.startsWith(child.href + "/");
+              const active = child.href === bestHref;
               return (
                 <Link
                   key={child.href}
