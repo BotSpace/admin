@@ -73,6 +73,13 @@ const initialForm: FormState = {
   is_verify: false,
 };
 
+// "t.me/bot" kabi schemasiz URL backend URLField'da 400 beradi — https:// qo'shamiz.
+export function normalizeUrl(value: string): string | undefined {
+  const v = value.trim();
+  if (!v) return undefined;
+  return /^https?:\/\//i.test(v) ? v : `https://${v}`;
+}
+
 const STEP_TITLES = ["Loyiha & asosiy", "Kerakli narsalar", "Kolleksiyalar", "Yaratish"] as const;
 const LAST_STEP = STEP_TITLES.length - 1;
 
@@ -828,7 +835,7 @@ export function TemplateCreateForm({ categories }: { categories: TemplateCategor
         original_price: form.original_price.trim(),
         discount: form.discount.trim() || undefined,
         discount_type: form.discount_type,
-        demo_url: form.demo_url.trim() || undefined,
+        demo_url: normalizeUrl(form.demo_url),
         categories: selectedCategories.length > 0 ? selectedCategories : undefined,
         is_verify: form.is_verify,
         spec_overrides: { credentials, modules, envs, collections },

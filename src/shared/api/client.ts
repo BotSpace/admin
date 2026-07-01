@@ -66,11 +66,22 @@ export async function apiFetch<T = unknown>(path: string, opts: ApiOptions = {})
 function extractMessage(data: unknown): string | undefined {
   if (!data || typeof data !== "object") return undefined;
   const d = data as Record<string, unknown>;
+  // DRF field xatolari: { errors: { field: ["msg", ...] } } → "field: msg"
+  const errs = d["errors"];
+  if (errs && typeof errs === "object" && !Array.isArray(errs)) {
+    const parts = Object.entries(errs as Record<string, unknown>).map(
+      ([k, v]) => `${k}: ${Array.isArray(v) ? v.join(" ") : String(v)}`
+    );
+    if (parts.length) return parts.join("; ");
+  }
   for (const key of ["detail", "message", "error", "errors"]) {
     const v = d[key];
-    if (typeof v === "string") return v;
+    // "ValidationError" o'zi ma'nosiz — field xatolarini afzal ko'ramiz
+    if (typeof v === "string" && v !== "ValidationError") return v;
     if (Array.isArray(v) && typeof v[0] === "string") return v[0];
   }
+  // {status, data:{...}} envelope — ichkariga kiramiz
+  if (d["data"] && typeof d["data"] === "object") return extractMessage(d["data"]);
   return undefined;
 }
 

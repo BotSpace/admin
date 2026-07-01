@@ -29,6 +29,7 @@ import {
   type TemplateSpecModule,
 } from "@/shared/api/services";
 import { credentialTypesAction, modulesCatalogAction, updateTemplateAction } from "./actions";
+import { normalizeUrl } from "./template-create-form";
 import { CredentialRow, ModuleRow, EnvRow } from "./spec-editors";
 import { CollectionDataGrid } from "./collection-data-grid";
 import { Pencil, ImagePlus, X, Plus, Info } from "lucide-react";
@@ -150,7 +151,7 @@ export function TemplateEditDialog({ template }: { template: AdminTemplateDetail
         original_price: form.original_price.trim() || undefined,
         discount: form.discount.trim() || undefined,
         discount_type: form.discount_type || undefined,
-        demo_url: form.demo_url.trim() || undefined,
+        demo_url: normalizeUrl(form.demo_url),
         is_verify: form.is_verify,
         spec: { ...spec, credentials, modules, envs, collections },
       },
