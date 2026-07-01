@@ -119,12 +119,18 @@ function EnvRow({
   onRemove: () => void;
 }) {
   return (
-    <div className="grid grid-cols-[1fr_1fr_auto_auto] gap-2 items-center">
+    <div className="grid grid-cols-[1fr_1fr_1fr_auto_auto] gap-2 items-center">
       <Input
         value={item.key}
         onChange={(e) => onChange({ key: e.target.value })}
         placeholder="KEY (masalan: ADMIN_CHAT_ID)"
         className="font-mono text-xs h-8"
+      />
+      <Input
+        value={item.label ?? ""}
+        onChange={(e) => onChange({ label: e.target.value })}
+        placeholder="Nomi (foydalanuvchi ko'radi)"
+        className="text-xs h-8"
       />
       <Input
         value={item.description ?? ""}

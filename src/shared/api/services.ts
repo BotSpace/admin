@@ -203,6 +203,7 @@ export type TemplateSpecModule = {
 export type TemplateSpecEnv = {
   key: string;
   required: boolean;
+  label?: string;
   description?: string;
 };
 
