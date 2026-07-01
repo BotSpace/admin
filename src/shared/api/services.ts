@@ -234,6 +234,20 @@ export type TemplateSpec = {
   envs?: TemplateSpecEnv[];
 };
 
+// Credential type registry entry (source: "code" | "admin" | "module:<slug>").
+export type CredentialTypeInfo = {
+  key: string;
+  label?: string;
+  source?: string;
+};
+
+// Module catalog entry — template spec'dagi modul slug select uchun.
+export type ModuleCatalogItem = {
+  slug: string;
+  name?: string;
+  description?: string;
+};
+
 export type AdminTemplateDetail = {
   id: number;
   name: string;
@@ -844,6 +858,15 @@ export const AdminAPI = {
     const d = raw.data;
     if (Array.isArray(d)) return d as TemplateCategory[];
     if (d && typeof d === "object" && "results" in d) return (d as { results: TemplateCategory[] }).results;
+    return [];
+  },
+
+  async modulesCatalog(): Promise<ModuleCatalogItem[]> {
+    type ModEnvelope = { status: boolean; data: { results: ModuleCatalogItem[] } | ModuleCatalogItem[] };
+    const raw = await apiFetch<ModEnvelope>("/api/v1/modules/?active=true");
+    const d = raw.data;
+    if (Array.isArray(d)) return d;
+    if (d && typeof d === "object" && "results" in d) return (d as { results: ModuleCatalogItem[] }).results;
     return [];
   },
 

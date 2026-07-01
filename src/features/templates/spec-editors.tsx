@@ -3,22 +3,44 @@ import { Input } from "@/shared/components/ui/input";
 import { Label } from "@/shared/components/ui/label";
 import { Switch } from "@/shared/components/ui/switch";
 import { Button } from "@/shared/components/ui/button";
-import { type TemplateSpecCredential, type TemplateSpecEnv, type TemplateSpecModule } from "@/shared/api/services";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/shared/components/ui/select";
+import {
+  type CredentialTypeInfo,
+  type ModuleCatalogItem,
+  type TemplateSpecCredential,
+  type TemplateSpecEnv,
+  type TemplateSpecModule,
+} from "@/shared/api/services";
 import { Trash2 } from "lucide-react";
 
 // Reusable grid-row editors for a template's spec (credentials / modules / envs).
-// Shared between the create flow (none yet — spec is auto-built) and the
-// unified template edit dialog's "Tarkib" tab.
+// Shared between the create wizard and the unified template edit dialog's
+// "Tarkib" tab. When option lists are provided, type/slug render as Select;
+// otherwise they fall back to a plain text input.
 
 export function CredentialRow({
   item,
   onChange,
   onRemove,
+  typeOptions,
 }: {
   item: TemplateSpecCredential;
   onChange: (patch: Partial<TemplateSpecCredential>) => void;
   onRemove: () => void;
+  typeOptions?: CredentialTypeInfo[];
 }) {
+  // Joriy qiymat ro'yxatda bo'lmasa ham ko'rinsin (legacy/noma'lum type).
+  const options =
+    typeOptions && item.type && !typeOptions.some((t) => t.key === item.type)
+      ? [...typeOptions, { key: item.type, label: item.type }]
+      : typeOptions;
+
   return (
     <div className="grid grid-cols-[1fr_1fr_auto_auto] gap-2 items-center">
       <Input
@@ -27,12 +49,30 @@ export function CredentialRow({
         placeholder="key (masalan: main_openai)"
         className="font-mono text-xs h-8"
       />
-      <Input
-        value={item.type}
-        onChange={(e) => onChange({ type: e.target.value })}
-        placeholder="type (masalan: openai)"
-        className="font-mono text-xs h-8"
-      />
+      {options && options.length > 0 ? (
+        <Select value={item.type || ""} onValueChange={(v) => onChange({ type: v })}>
+          <SelectTrigger className="h-8 text-xs">
+            <SelectValue placeholder="Type tanlang" />
+          </SelectTrigger>
+          <SelectContent>
+            {options.map((t) => (
+              <SelectItem key={t.key} value={t.key} className="text-xs">
+                {t.label || t.key}
+                {t.source?.startsWith("module:") && (
+                  <span className="ml-1.5 text-muted-foreground">({t.source.slice(7)})</span>
+                )}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      ) : (
+        <Input
+          value={item.type}
+          onChange={(e) => onChange({ type: e.target.value })}
+          placeholder="type (masalan: openai)"
+          className="font-mono text-xs h-8"
+        />
+      )}
       <div className="flex items-center gap-1.5">
         <Switch
           checked={item.required}
@@ -60,19 +100,44 @@ export function ModuleRow({
   item,
   onChange,
   onRemove,
+  slugOptions,
 }: {
   item: TemplateSpecModule;
   onChange: (patch: Partial<TemplateSpecModule>) => void;
   onRemove: () => void;
+  slugOptions?: ModuleCatalogItem[];
 }) {
+  const options =
+    slugOptions && item.slug && !slugOptions.some((m) => m.slug === item.slug)
+      ? [...slugOptions, { slug: item.slug, name: item.slug }]
+      : slugOptions;
+
   return (
     <div className="grid grid-cols-[1fr_auto_auto] gap-2 items-center">
-      <Input
-        value={item.slug}
-        onChange={(e) => onChange({ slug: e.target.value })}
-        placeholder="slug (masalan: payment-click)"
-        className="font-mono text-xs h-8"
-      />
+      {options && options.length > 0 ? (
+        <Select value={item.slug || ""} onValueChange={(v) => onChange({ slug: v })}>
+          <SelectTrigger className="h-8 text-xs">
+            <SelectValue placeholder="Modul tanlang" />
+          </SelectTrigger>
+          <SelectContent>
+            {options.map((m) => (
+              <SelectItem key={m.slug} value={m.slug} className="text-xs">
+                {m.name || m.slug}
+                {m.name && m.name !== m.slug && (
+                  <span className="ml-1.5 font-mono text-muted-foreground">({m.slug})</span>
+                )}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      ) : (
+        <Input
+          value={item.slug}
+          onChange={(e) => onChange({ slug: e.target.value })}
+          placeholder="slug (masalan: payment-click)"
+          className="font-mono text-xs h-8"
+        />
+      )}
       <div className="flex items-center gap-1.5">
         <Switch
           checked={item.required}

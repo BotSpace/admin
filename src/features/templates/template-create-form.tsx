@@ -1,5 +1,5 @@
 "use client";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { toast } from "sonner";
@@ -31,13 +31,20 @@ import {
 } from "lucide-react";
 import {
   type AdminProject,
+  type CredentialTypeInfo,
+  type ModuleCatalogItem,
   type TemplateCategory,
   type TemplateSpecCollection,
   type TemplateSpecCredential,
   type TemplateSpecEnv,
   type TemplateSpecModule,
 } from "@/shared/api/services";
-import { createTemplateAction, previewTemplateSpecAction } from "./actions";
+import {
+  createTemplateAction,
+  credentialTypesAction,
+  modulesCatalogAction,
+  previewTemplateSpecAction,
+} from "./actions";
 import { ProjectPicker } from "./project-picker";
 import { CredentialRow, ModuleRow, EnvRow } from "./spec-editors";
 import { CollectionDataGrid } from "./collection-data-grid";
@@ -347,6 +354,8 @@ function Step2Content({
   setModules,
   envs,
   setEnvs,
+  credentialTypes,
+  moduleCatalog,
 }: {
   project: AdminProject | null;
   specLoading: boolean;
@@ -356,7 +365,18 @@ function Step2Content({
   setModules: React.Dispatch<React.SetStateAction<TemplateSpecModule[]>>;
   envs: TemplateSpecEnv[];
   setEnvs: React.Dispatch<React.SetStateAction<TemplateSpecEnv[]>>;
+  credentialTypes: CredentialTypeInfo[];
+  moduleCatalog: ModuleCatalogItem[];
 }) {
+  // Type select: core (code/admin) type'lar doim + FAQAT tanlangan modullarning
+  // type'lari (module:<slug>). Modul tanlanmaguncha uning type'lari ko'rinmaydi —
+  // shuning uchun modullar bo'limi kredensiallardan OLDIN turadi.
+  const selectedSlugs = new Set(modules.map((m) => m.slug).filter(Boolean));
+  const availableTypes = credentialTypes.filter((t) => {
+    if (!t.source?.startsWith("module:")) return true;
+    return selectedSlugs.has(t.source.slice(7));
+  });
+
   if (!project) {
     return <p className="text-sm text-muted-foreground">Avval loyiha tanlang.</p>;
   }
@@ -374,8 +394,53 @@ function Step2Content({
       <p className="text-xs text-muted-foreground">
         Quyidagi ro&apos;yxatlar shablon bilan birga saqlanadigan majburiy/ixtiyoriy kredensial,
         modul va env talablarini belgilaydi. Loyihadan avtomatik olindi, kerak bo&apos;lsa
-        tahrirlang.
+        tahrirlang. Avval modullarni belgilang — modul o&apos;zi bilan kredensial type&apos;larini
+        olib keladi.
       </p>
+
+      {/* Modules — kredensiallardan OLDIN: modul credential type'larini ochadi */}
+      <div className="space-y-2">
+        <div className="flex items-center justify-between">
+          <Label className="text-sm font-medium">
+            Modullar
+            {modules.length > 0 && (
+              <Badge variant="secondary" className="ml-2 text-xs">
+                {modules.length}
+              </Badge>
+            )}
+          </Label>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="h-7 text-xs gap-1"
+            onClick={() => setModules((prev) => [...prev, { slug: "", required: true }])}
+          >
+            <Plus className="h-3 w-3" />
+            Qo&apos;shish
+          </Button>
+        </div>
+        {modules.length === 0 ? (
+          <p className="text-xs text-muted-foreground">Modullar yo&apos;q</p>
+        ) : (
+          <div className="space-y-2">
+            <div className="grid grid-cols-[1fr_auto_auto] gap-2 text-xs text-muted-foreground px-0.5">
+              <span>Modul</span>
+              <span></span>
+              <span></span>
+            </div>
+            {modules.map((m, i) => (
+              <ModuleRow
+                key={i}
+                item={m}
+                slugOptions={moduleCatalog}
+                onChange={(patch) => setModules((prev) => prev.map((x, j) => (j === i ? { ...x, ...patch } : x)))}
+                onRemove={() => setModules((prev) => prev.filter((_, j) => j !== i))}
+              />
+            ))}
+          </div>
+        )}
+      </div>
 
       {/* Credentials */}
       <div className="space-y-2">
@@ -415,53 +480,11 @@ function Step2Content({
               <CredentialRow
                 key={i}
                 item={c}
+                typeOptions={availableTypes}
                 onChange={(patch) =>
                   setCredentials((prev) => prev.map((x, j) => (j === i ? { ...x, ...patch } : x)))
                 }
                 onRemove={() => setCredentials((prev) => prev.filter((_, j) => j !== i))}
-              />
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* Modules */}
-      <div className="space-y-2">
-        <div className="flex items-center justify-between">
-          <Label className="text-sm font-medium">
-            Modullar
-            {modules.length > 0 && (
-              <Badge variant="secondary" className="ml-2 text-xs">
-                {modules.length}
-              </Badge>
-            )}
-          </Label>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            className="h-7 text-xs gap-1"
-            onClick={() => setModules((prev) => [...prev, { slug: "", required: true }])}
-          >
-            <Plus className="h-3 w-3" />
-            Qo&apos;shish
-          </Button>
-        </div>
-        {modules.length === 0 ? (
-          <p className="text-xs text-muted-foreground">Modullar yo&apos;q</p>
-        ) : (
-          <div className="space-y-2">
-            <div className="grid grid-cols-[1fr_auto_auto] gap-2 text-xs text-muted-foreground px-0.5">
-              <span>Slug</span>
-              <span></span>
-              <span></span>
-            </div>
-            {modules.map((m, i) => (
-              <ModuleRow
-                key={i}
-                item={m}
-                onChange={(patch) => setModules((prev) => prev.map((x, j) => (j === i ? { ...x, ...patch } : x)))}
-                onRemove={() => setModules((prev) => prev.filter((_, j) => j !== i))}
               />
             ))}
           </div>
@@ -690,6 +713,19 @@ export function TemplateCreateForm({ categories }: { categories: TemplateCategor
 
   const [stepIndex, setStepIndex] = useState(0);
 
+  // Registrlar: credential type'lar (code/admin/module) + modul katalogi —
+  // step 2 select'lari uchun bir marta yuklanadi.
+  const [credentialTypes, setCredentialTypes] = useState<CredentialTypeInfo[]>([]);
+  const [moduleCatalog, setModuleCatalog] = useState<ModuleCatalogItem[]>([]);
+  useEffect(() => {
+    void credentialTypesAction().then((r) => {
+      if (r.ok) setCredentialTypes(r.data);
+    });
+    void modulesCatalogAction().then((r) => {
+      if (r.ok) setModuleCatalog(r.data);
+    });
+  }, []);
+
   function set<K extends keyof FormState>(key: K, value: FormState[K]) {
     setForm((prev) => ({ ...prev, [key]: value }));
   }
@@ -853,6 +889,8 @@ export function TemplateCreateForm({ categories }: { categories: TemplateCategor
             setModules={setModules}
             envs={envs}
             setEnvs={setEnvs}
+            credentialTypes={credentialTypes}
+            moduleCatalog={moduleCatalog}
           />
         )}
 

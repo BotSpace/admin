@@ -1,5 +1,5 @@
 "use client";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { toast } from "sonner";
 import {
@@ -20,11 +20,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/shared/components/ui/tabs";
 import {
   type AdminTemplateDetail,
+  type CredentialTypeInfo,
+  type ModuleCatalogItem,
   type TemplateSpecCredential,
   type TemplateSpecEnv,
   type TemplateSpecModule,
 } from "@/shared/api/services";
-import { updateTemplateAction } from "./actions";
+import { credentialTypesAction, modulesCatalogAction, updateTemplateAction } from "./actions";
 import { CredentialRow, ModuleRow, EnvRow } from "./spec-editors";
 import { Pencil, ImagePlus, X, Plus } from "lucide-react";
 
@@ -66,6 +68,26 @@ export function TemplateEditDialog({ template }: { template: AdminTemplateDetail
   const [credentials, setCredentials] = useState<TemplateSpecCredential[]>(spec.credentials ?? []);
   const [modules, setModules] = useState<TemplateSpecModule[]>(spec.modules ?? []);
   const [envs, setEnvs] = useState<TemplateSpecEnv[]>(spec.envs ?? []);
+
+  // Registrlar: credential type + modul katalogi — dialog ochilganda yuklanadi.
+  const [credentialTypes, setCredentialTypes] = useState<CredentialTypeInfo[]>([]);
+  const [moduleCatalog, setModuleCatalog] = useState<ModuleCatalogItem[]>([]);
+  useEffect(() => {
+    if (!open) return;
+    void credentialTypesAction().then((r) => {
+      if (r.ok) setCredentialTypes(r.data);
+    });
+    void modulesCatalogAction().then((r) => {
+      if (r.ok) setModuleCatalog(r.data);
+    });
+  }, [open]);
+
+  // Modul type'lari faqat tanlangan modullar uchun ko'rinadi.
+  const selectedSlugs = new Set(modules.map((m) => m.slug).filter(Boolean));
+  const availableTypes = credentialTypes.filter((t) => {
+    if (!t.source?.startsWith("module:")) return true;
+    return selectedSlugs.has(t.source.slice(7));
+  });
 
   function set<K extends keyof FormState>(key: K, value: FormState[K]) {
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -307,6 +329,52 @@ export function TemplateEditDialog({ template }: { template: AdminTemplateDetail
               yangilanadi va bu yerda tahrirlanmaydi.
             </p>
 
+            {/* Modules — kredensiallardan OLDIN: modul credential type'larini ochadi */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Label className="text-sm font-medium">
+                  Modullar
+                  {modules.length > 0 && (
+                    <Badge variant="secondary" className="ml-2 text-xs">
+                      {modules.length}
+                    </Badge>
+                  )}
+                </Label>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="h-7 text-xs gap-1"
+                  onClick={() => setModules((prev) => [...prev, { slug: "", required: true }])}
+                >
+                  <Plus className="h-3 w-3" />
+                  Qo&apos;shish
+                </Button>
+              </div>
+              {modules.length === 0 ? (
+                <p className="text-xs text-muted-foreground">Modullar yo&apos;q</p>
+              ) : (
+                <div className="space-y-2">
+                  <div className="grid grid-cols-[1fr_auto_auto] gap-2 text-xs text-muted-foreground px-0.5">
+                    <span>Modul</span>
+                    <span></span>
+                    <span></span>
+                  </div>
+                  {modules.map((m, i) => (
+                    <ModuleRow
+                      key={i}
+                      item={m}
+                      slugOptions={moduleCatalog}
+                      onChange={(patch) =>
+                        setModules((prev) => prev.map((x, j) => (j === i ? { ...x, ...patch } : x)))
+                      }
+                      onRemove={() => setModules((prev) => prev.filter((_, j) => j !== i))}
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
+
             {/* Credentials */}
             <div className="space-y-2">
               <div className="flex items-center justify-between">
@@ -348,55 +416,11 @@ export function TemplateEditDialog({ template }: { template: AdminTemplateDetail
                     <CredentialRow
                       key={i}
                       item={c}
+                      typeOptions={availableTypes}
                       onChange={(patch) =>
                         setCredentials((prev) => prev.map((x, j) => (j === i ? { ...x, ...patch } : x)))
                       }
                       onRemove={() => setCredentials((prev) => prev.filter((_, j) => j !== i))}
-                    />
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {/* Modules */}
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <Label className="text-sm font-medium">
-                  Modullar
-                  {modules.length > 0 && (
-                    <Badge variant="secondary" className="ml-2 text-xs">
-                      {modules.length}
-                    </Badge>
-                  )}
-                </Label>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  className="h-7 text-xs gap-1"
-                  onClick={() => setModules((prev) => [...prev, { slug: "", required: true }])}
-                >
-                  <Plus className="h-3 w-3" />
-                  Qo&apos;shish
-                </Button>
-              </div>
-              {modules.length === 0 ? (
-                <p className="text-xs text-muted-foreground">Modullar yo&apos;q</p>
-              ) : (
-                <div className="space-y-2">
-                  <div className="grid grid-cols-[1fr_auto_auto] gap-2 text-xs text-muted-foreground px-0.5">
-                    <span>Slug</span>
-                    <span></span>
-                    <span></span>
-                  </div>
-                  {modules.map((m, i) => (
-                    <ModuleRow
-                      key={i}
-                      item={m}
-                      onChange={(patch) =>
-                        setModules((prev) => prev.map((x, j) => (j === i ? { ...x, ...patch } : x)))
-                      }
-                      onRemove={() => setModules((prev) => prev.filter((_, j) => j !== i))}
                     />
                   ))}
                 </div>

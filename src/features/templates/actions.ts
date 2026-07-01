@@ -67,6 +67,24 @@ export async function previewTemplateSpecAction(projectId: number) {
   }
 }
 
+export async function credentialTypesAction() {
+  try {
+    const data = await AdminAPI.credentialTypes();
+    return { ok: true as const, data };
+  } catch (e) {
+    return { ok: false as const, message: isApiError(e) ? e.message : "Xatolik yuz berdi" };
+  }
+}
+
+export async function modulesCatalogAction() {
+  try {
+    const data = await AdminAPI.modulesCatalog();
+    return { ok: true as const, data };
+  } catch (e) {
+    return { ok: false as const, message: isApiError(e) ? e.message : "Xatolik yuz berdi" };
+  }
+}
+
 export async function searchProjectsAction(search: string) {
   try {
     const page = await AdminAPI.projects({ search: search || undefined, page: 1 });
