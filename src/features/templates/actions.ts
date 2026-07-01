@@ -1,6 +1,6 @@
 "use server";
 import { revalidatePath } from "next/cache";
-import { AdminAPI, type AdminTemplateDetail, type TemplateSubmission } from "@/shared/api/services";
+import { AdminAPI, type AdminTemplateDetail, type TemplateSpec, type TemplateSubmission } from "@/shared/api/services";
 import { isApiError } from "@/shared/api/client";
 
 export async function verifyTemplateAction(id: number, is_verify: boolean, note?: string) {
@@ -22,6 +22,29 @@ export async function updateTemplateAction(
     await AdminAPI.updateTemplate(id, body, image);
     revalidatePath(`/templates/${id}`);
     revalidatePath("/templates");
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, message: isApiError(e) ? e.message : "Xatolik yuz berdi" };
+  }
+}
+
+export async function updateSpecAction(
+  id: number,
+  spec: TemplateSpec
+) {
+  try {
+    await AdminAPI.updateTemplate(id, { spec });
+    revalidatePath(`/templates/${id}`);
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, message: isApiError(e) ? e.message : "Xatolik yuz berdi" };
+  }
+}
+
+export async function resyncTemplateAction(id: number) {
+  try {
+    await AdminAPI.resyncTemplate(id);
+    revalidatePath(`/templates/${id}`);
     return { ok: true };
   } catch (e) {
     return { ok: false, message: isApiError(e) ? e.message : "Xatolik yuz berdi" };

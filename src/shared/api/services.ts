@@ -187,6 +187,40 @@ export type AdminTemplate = {
   created_at: string;
 };
 
+export type TemplateSpecCredential = {
+  key: string;
+  type: string;
+  label?: string;
+  required: boolean;
+  description?: string;
+};
+
+export type TemplateSpecModule = {
+  slug: string;
+  required: boolean;
+};
+
+export type TemplateSpecEnv = {
+  key: string;
+  required: boolean;
+  description?: string;
+};
+
+export type TemplateSpecCollection = {
+  name: string;
+  label?: string;
+  fields: unknown[];
+  data: unknown[];
+};
+
+export type TemplateSpec = {
+  flow?: unknown;
+  collections?: TemplateSpecCollection[];
+  credentials?: TemplateSpecCredential[];
+  modules?: TemplateSpecModule[];
+  envs?: TemplateSpecEnv[];
+};
+
 export type AdminTemplateDetail = {
   id: number;
   name: string;
@@ -208,6 +242,8 @@ export type AdminTemplateDetail = {
   orders_confirmed: number;
   node_count?: number;
   required_envs?: { key: string; description?: string }[];
+  spec?: TemplateSpec;
+  has_project?: boolean;
   created_at: string;
   updated_at?: string;
 };
@@ -708,14 +744,16 @@ export const AdminAPI = {
 
   async updateTemplate(
     id: number,
-    body: Partial<Pick<AdminTemplateDetail, "name" | "short_description" | "description" | "original_price" | "discount" | "discount_type" | "is_verify" | "demo_url">>,
+    body: Partial<Pick<AdminTemplateDetail, "name" | "short_description" | "description" | "original_price" | "discount" | "discount_type" | "is_verify" | "demo_url" | "spec">>,
     image?: File | Blob
   ): Promise<AdminTemplateDetail> {
     if (image) {
       const fd = new FormData();
       fd.append("image", image);
       for (const [k, v] of Object.entries(body)) {
-        if (v !== undefined && v !== null) fd.append(k, String(v));
+        if (v !== undefined && v !== null) {
+          fd.append(k, typeof v === "object" ? JSON.stringify(v) : String(v));
+        }
       }
       const raw = await api<Envelope<AdminTemplateDetail>>(`/api/v1/admin/templates/${id}/`, {
         method: "PATCH",
@@ -726,6 +764,14 @@ export const AdminAPI = {
     const raw = await api<Envelope<AdminTemplateDetail>>(`/api/v1/admin/templates/${id}/`, {
       method: "PATCH",
       json: body,
+    });
+    return unwrap(raw);
+  },
+
+  async resyncTemplate(id: number): Promise<AdminTemplateDetail> {
+    const raw = await api<Envelope<AdminTemplateDetail>>(`/api/v1/admin/templates/${id}/resync/`, {
+      method: "PATCH",
+      json: {},
     });
     return unwrap(raw);
   },

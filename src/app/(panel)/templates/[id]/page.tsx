@@ -11,6 +11,9 @@ import {
 } from "@/shared/components/ui/card";
 import { VerifyToggle } from "@/features/templates/verify-toggle";
 import { TemplateEditDialog } from "@/features/templates/template-edit-dialog";
+import { SpecSection } from "@/features/templates/spec-section";
+import { SpecEditDialog } from "@/features/templates/spec-edit-dialog";
+import { ResyncButton } from "@/features/templates/resync-button";
 import { format } from "date-fns";
 import { ChevronLeft, ExternalLink } from "lucide-react";
 import { formatCurrency } from "@/shared/lib/utils";
@@ -78,6 +81,8 @@ export default async function TemplateDetailPage({
             {template.is_verify ? "Tasdiqlangan" : "Kutilmoqda"}
           </Badge>
           <TemplateEditDialog template={template} />
+          <SpecEditDialog templateId={template.id} spec={template.spec ?? {}} />
+          {template.has_project && <ResyncButton id={template.id} />}
           <VerifyToggle id={template.id} isVerify={template.is_verify} name={template.name} />
         </div>
       </div>
@@ -230,6 +235,9 @@ export default async function TemplateDetailPage({
           </dl>
         </CardContent>
       </Card>
+
+      {/* Shablon tarkibi (spec) */}
+      <SpecSection spec={template.spec ?? {}} />
     </div>
   );
 }
