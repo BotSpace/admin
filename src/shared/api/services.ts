@@ -207,11 +207,23 @@ export type TemplateSpecEnv = {
   description?: string;
 };
 
+export type TemplateSpecCollectionField = {
+  name: string;
+  label?: string;
+  kind: string;
+  required?: boolean;
+  default?: unknown;
+  order?: number;
+};
+
 export type TemplateSpecCollection = {
   name: string;
   label?: string;
-  fields: unknown[];
-  data: unknown[];
+  description?: string;
+  primary_field?: string;
+  system?: boolean;
+  fields: TemplateSpecCollectionField[];
+  data: Record<string, unknown>[];
 };
 
 export type TemplateSpec = {
@@ -275,6 +287,7 @@ export type CreateTemplateBody = {
     credentials?: TemplateSpecCredential[];
     modules?: TemplateSpecModule[];
     envs?: TemplateSpecEnv[];
+    collections?: TemplateSpecCollection[];
   };
 };
 
@@ -284,6 +297,7 @@ export type TemplateSpecPreview = {
   credentials: TemplateSpecCredential[];
   modules: TemplateSpecModule[];
   envs: TemplateSpecEnv[];
+  collections: TemplateSpecCollection[];
 };
 
 export type TemplateVersion = {
