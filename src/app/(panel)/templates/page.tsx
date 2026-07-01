@@ -3,9 +3,11 @@ import Image from "next/image";
 import { AdminAPI } from "@/shared/api/services";
 import { DataTable } from "@/shared/components/data-table";
 import { Badge } from "@/shared/components/ui/badge";
+import { Button } from "@/shared/components/ui/button";
 import { VerifyToggle } from "@/features/templates/verify-toggle";
 import { TemplatesFilter } from "@/features/templates/templates-filter";
 import { format } from "date-fns";
+import { Plus } from "lucide-react";
 import { formatCurrency } from "@/shared/lib/utils";
 
 type SearchParams = {
@@ -68,11 +70,19 @@ export default async function TemplatesPage({
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold">Shablonlar</h1>
-        <p className="text-muted-foreground text-sm">
-          {result ? `Jami: ${result.total_items}` : ""}
-        </p>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold">Shablonlar</h1>
+          <p className="text-muted-foreground text-sm">
+            {result ? `Jami: ${result.total_items}` : ""}
+          </p>
+        </div>
+        <Button asChild size="sm">
+          <Link href="/templates/new">
+            <Plus className="h-4 w-4 mr-1" />
+            Yangi template
+          </Link>
+        </Button>
       </div>
 
       <TemplatesFilter

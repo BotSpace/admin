@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
-import { AdminAPI, AdminTemplateDetail } from "@/shared/api/services";
+import { AdminAPI, AdminTemplateDetail, TemplateVersion } from "@/shared/api/services";
 import { Badge } from "@/shared/components/ui/badge";
 import {
   Card,
@@ -12,8 +12,8 @@ import {
 import { VerifyToggle } from "@/features/templates/verify-toggle";
 import { TemplateEditDialog } from "@/features/templates/template-edit-dialog";
 import { SpecSection } from "@/features/templates/spec-section";
-import { SpecEditDialog } from "@/features/templates/spec-edit-dialog";
 import { ResyncButton } from "@/features/templates/resync-button";
+import { TemplateVersionsCard } from "@/features/templates/template-versions-card";
 import { format } from "date-fns";
 import { ChevronLeft, ExternalLink } from "lucide-react";
 import { formatCurrency } from "@/shared/lib/utils";
@@ -38,6 +38,13 @@ export default async function TemplateDetailPage({
     template = await AdminAPI.template(Number(id));
   } catch {
     notFound();
+  }
+
+  let versions: TemplateVersion[] = [];
+  try {
+    versions = await AdminAPI.templateVersions(template.id);
+  } catch {
+    // degraded gracefully — versions history is non-critical
   }
 
   const price = template.original_price ? Number(template.original_price) : null;
@@ -80,8 +87,10 @@ export default async function TemplateDetailPage({
           <Badge variant={template.is_verify ? "success" : "warn"}>
             {template.is_verify ? "Tasdiqlangan" : "Kutilmoqda"}
           </Badge>
+          {template.version !== undefined && (
+            <Badge variant="outline">v{template.version}</Badge>
+          )}
           <TemplateEditDialog template={template} />
-          <SpecEditDialog templateId={template.id} spec={template.spec ?? {}} />
           {template.has_project && <ResyncButton id={template.id} />}
           <VerifyToggle id={template.id} isVerify={template.is_verify} name={template.name} />
         </div>
@@ -235,6 +244,13 @@ export default async function TemplateDetailPage({
           </dl>
         </CardContent>
       </Card>
+
+      {/* Versiyalar tarixi */}
+      <TemplateVersionsCard
+        templateId={template.id}
+        currentVersion={template.version}
+        versions={versions}
+      />
 
       {/* Shablon tarkibi (spec) */}
       <SpecSection spec={template.spec ?? {}} />

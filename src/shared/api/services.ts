@@ -244,6 +244,7 @@ export type AdminTemplateDetail = {
   node_count?: number;
   required_envs?: { key: string; description?: string }[];
   spec?: TemplateSpec;
+  version?: number;
   has_project?: boolean;
   created_at: string;
   updated_at?: string;
@@ -252,6 +253,37 @@ export type AdminTemplateDetail = {
 export type TemplateCategory = {
   id: number;
   name: string;
+};
+
+// Payload for POST /admin/templates/ — project is required, spec is built
+// server-side from the project's current flow/collections/credentials/modules.
+export type CreateTemplateBody = {
+  project: number;
+  name: string;
+  short_description?: string;
+  description?: string;
+  original_price: string;
+  discount?: string;
+  discount_type?: "percent" | "amount";
+  demo_url?: string;
+  categories?: number[];
+  features?: number[];
+  is_verify?: boolean;
+};
+
+export type TemplateVersion = {
+  version: number;
+  note?: string | null;
+  created_by_phone?: string | null;
+  created_at: string;
+  is_current: boolean;
+};
+
+export type TemplateVersionDetail = {
+  version: number;
+  note?: string | null;
+  spec: TemplateSpec;
+  created_at: string;
 };
 
 export type TemplateSubmission = {
@@ -784,6 +816,51 @@ export const AdminAPI = {
     if (Array.isArray(d)) return d as TemplateCategory[];
     if (d && typeof d === "object" && "results" in d) return (d as { results: TemplateCategory[] }).results;
     return [];
+  },
+
+  async createTemplate(body: CreateTemplateBody, image?: File | Blob): Promise<AdminTemplateDetail> {
+    if (image) {
+      const fd = new FormData();
+      fd.append("image", image);
+      for (const [k, v] of Object.entries(body)) {
+        if (v !== undefined && v !== null) {
+          fd.append(k, typeof v === "object" ? JSON.stringify(v) : String(v));
+        }
+      }
+      const raw = await api<Envelope<AdminTemplateDetail>>("/api/v1/admin/templates/", {
+        method: "POST",
+        body: fd,
+      });
+      return unwrap(raw);
+    }
+    const raw = await api<Envelope<AdminTemplateDetail>>("/api/v1/admin/templates/", {
+      method: "POST",
+      json: body,
+    });
+    return unwrap(raw);
+  },
+
+  async templateVersions(id: number): Promise<TemplateVersion[]> {
+    const raw = await api<Envelope<TemplateVersion[]>>(`/api/v1/admin/templates/${id}/versions/`);
+    return unwrap(raw);
+  },
+
+  async templateVersion(id: number, version: number): Promise<TemplateVersionDetail> {
+    const raw = await api<Envelope<TemplateVersionDetail>>(
+      `/api/v1/admin/templates/${id}/versions/${version}/`
+    );
+    return unwrap(raw);
+  },
+
+  async rollbackTemplate(
+    id: number,
+    body: { version: number; note?: string }
+  ): Promise<AdminTemplateDetail> {
+    const raw = await api<Envelope<AdminTemplateDetail>>(`/api/v1/admin/templates/${id}/rollback/`, {
+      method: "POST",
+      json: body,
+    });
+    return unwrap(raw);
   },
 
   // Template submissions
