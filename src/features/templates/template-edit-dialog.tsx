@@ -18,17 +18,20 @@ import { Switch } from "@/shared/components/ui/switch";
 import { Badge } from "@/shared/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/shared/components/ui/tabs";
+import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui/card";
 import {
   type AdminTemplateDetail,
   type CredentialTypeInfo,
   type ModuleCatalogItem,
+  type TemplateSpecCollection,
   type TemplateSpecCredential,
   type TemplateSpecEnv,
   type TemplateSpecModule,
 } from "@/shared/api/services";
 import { credentialTypesAction, modulesCatalogAction, updateTemplateAction } from "./actions";
 import { CredentialRow, ModuleRow, EnvRow } from "./spec-editors";
-import { Pencil, ImagePlus, X, Plus } from "lucide-react";
+import { CollectionDataGrid } from "./collection-data-grid";
+import { Pencil, ImagePlus, X, Plus, Info } from "lucide-react";
 
 const MAX_IMAGE_SIZE = 5 * 1024 * 1024; // 5 MB
 
@@ -68,6 +71,7 @@ export function TemplateEditDialog({ template }: { template: AdminTemplateDetail
   const [credentials, setCredentials] = useState<TemplateSpecCredential[]>(spec.credentials ?? []);
   const [modules, setModules] = useState<TemplateSpecModule[]>(spec.modules ?? []);
   const [envs, setEnvs] = useState<TemplateSpecEnv[]>(spec.envs ?? []);
+  const [collections, setCollections] = useState<TemplateSpecCollection[]>(spec.collections ?? []);
 
   // Registrlar: credential type + modul katalogi — dialog ochilganda yuklanadi.
   const [credentialTypes, setCredentialTypes] = useState<CredentialTypeInfo[]>([]);
@@ -98,6 +102,7 @@ export function TemplateEditDialog({ template }: { template: AdminTemplateDetail
     setCredentials(spec.credentials ?? []);
     setModules(spec.modules ?? []);
     setEnvs(spec.envs ?? []);
+    setCollections(spec.collections ?? []);
   }
 
   function handleOpenChange(v: boolean) {
@@ -147,7 +152,7 @@ export function TemplateEditDialog({ template }: { template: AdminTemplateDetail
         discount_type: form.discount_type || undefined,
         demo_url: form.demo_url.trim() || undefined,
         is_verify: form.is_verify,
-        spec: { ...spec, credentials, modules, envs },
+        spec: { ...spec, credentials, modules, envs, collections },
       },
       imageFile ?? undefined
     );
@@ -177,6 +182,7 @@ export function TemplateEditDialog({ template }: { template: AdminTemplateDetail
           <TabsList>
             <TabsTrigger value="basic">Asosiy</TabsTrigger>
             <TabsTrigger value="content">Tarkib</TabsTrigger>
+            <TabsTrigger value="collections">Kolleksiyalar</TabsTrigger>
           </TabsList>
 
           <TabsContent value="basic" className="space-y-4">
@@ -324,11 +330,6 @@ export function TemplateEditDialog({ template }: { template: AdminTemplateDetail
           </TabsContent>
 
           <TabsContent value="content" className="space-y-6">
-            <p className="text-xs text-muted-foreground">
-              Kolleksiyalar (flow ma&apos;lumotlari) faqat &quot;Loyihadan yangilash&quot; orqali
-              yangilanadi va bu yerda tahrirlanmaydi.
-            </p>
-
             {/* Modules — kredensiallardan OLDIN: modul credential type'larini ochadi */}
             <div className="space-y-2">
               <div className="flex items-center justify-between">
@@ -472,6 +473,64 @@ export function TemplateEditDialog({ template }: { template: AdminTemplateDetail
                 </div>
               )}
             </div>
+          </TabsContent>
+
+          <TabsContent value="collections" className="space-y-6">
+            {(() => {
+              const editable = collections.filter((c) => !c.system);
+              const system = collections.filter((c) => c.system);
+
+              function updateData(name: string, data: Record<string, unknown>[]) {
+                setCollections((prev) => prev.map((c) => (c.name === name ? { ...c, data } : c)));
+              }
+
+              if (collections.length === 0) {
+                return <p className="text-sm text-muted-foreground">Kolleksiyalar topilmadi.</p>;
+              }
+
+              return (
+                <>
+                  {editable.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">
+                      Tahrirlash mumkin bo&apos;lgan kolleksiyalar yo&apos;q.
+                    </p>
+                  ) : (
+                    <>
+                      <p className="flex items-start gap-1.5 text-xs text-muted-foreground">
+                        <Info className="h-3.5 w-3.5 shrink-0 mt-0.5" />
+                        Bu yerga kiritilgan ma&apos;lumot shablondan yaratilgan botda paydo bo&apos;ladi.
+                      </p>
+                      {editable.map((c) => (
+                        <div key={c.name} className="space-y-2">
+                          {c.description && <p className="text-xs text-muted-foreground">{c.description}</p>}
+                          <CollectionDataGrid collection={c} onChange={(data) => updateData(c.name, data)} />
+                        </div>
+                      ))}
+                    </>
+                  )}
+
+                  {system.length > 0 && (
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="text-sm font-semibold">Tizim kolleksiyalari</CardTitle>
+                      </CardHeader>
+                      <CardContent className="space-y-2">
+                        <div className="flex flex-wrap gap-2">
+                          {system.map((c) => (
+                            <Badge key={c.name} variant="outline">
+                              {c.label || c.name}
+                            </Badge>
+                          ))}
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                          Tizim kolleksiyasi — shablon ma&apos;lumoti bilan boshlang&apos;ich to&apos;ldirilmaydi.
+                        </p>
+                      </CardContent>
+                    </Card>
+                  )}
+                </>
+              );
+            })()}
           </TabsContent>
         </Tabs>
 

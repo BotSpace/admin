@@ -100,44 +100,22 @@ export function ModuleRow({
   item,
   onChange,
   onRemove,
-  slugOptions,
 }: {
   item: TemplateSpecModule;
   onChange: (patch: Partial<TemplateSpecModule>) => void;
   onRemove: () => void;
+  // Qabul qilinadi lekin ishlatilmaydi — modul slug ODDIY input (user talabi:
+  // async katalog kelganda Input→Select almashuvi yozishni buzardi).
   slugOptions?: ModuleCatalogItem[];
 }) {
-  const options =
-    slugOptions && item.slug && !slugOptions.some((m) => m.slug === item.slug)
-      ? [...slugOptions, { slug: item.slug, name: item.slug }]
-      : slugOptions;
-
   return (
     <div className="grid grid-cols-[1fr_auto_auto] gap-2 items-center">
-      {options && options.length > 0 ? (
-        <Select value={item.slug || ""} onValueChange={(v) => onChange({ slug: v })}>
-          <SelectTrigger className="h-8 text-xs">
-            <SelectValue placeholder="Modul tanlang" />
-          </SelectTrigger>
-          <SelectContent>
-            {options.map((m) => (
-              <SelectItem key={m.slug} value={m.slug} className="text-xs">
-                {m.name || m.slug}
-                {m.name && m.name !== m.slug && (
-                  <span className="ml-1.5 font-mono text-muted-foreground">({m.slug})</span>
-                )}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      ) : (
-        <Input
-          value={item.slug}
-          onChange={(e) => onChange({ slug: e.target.value })}
-          placeholder="slug (masalan: payment-click)"
-          className="font-mono text-xs h-8"
-        />
-      )}
+      <Input
+        value={item.slug}
+        onChange={(e) => onChange({ slug: e.target.value })}
+        placeholder="slug (masalan: payment-click)"
+        className="font-mono text-xs h-8"
+      />
       <div className="flex items-center gap-1.5">
         <Switch
           checked={item.required}

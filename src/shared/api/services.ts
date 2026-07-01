@@ -875,8 +875,15 @@ export const AdminAPI = {
       const fd = new FormData();
       fd.append("image", image);
       for (const [k, v] of Object.entries(body)) {
-        if (v !== undefined && v !== null) {
-          fd.append(k, typeof v === "object" ? JSON.stringify(v) : String(v));
+        if (v === undefined || v === null) continue;
+        if (Array.isArray(v)) {
+          // DRF many=True field'lari takroriy key kutadi: categories=1&categories=2.
+          for (const item of v) fd.append(k, String(item));
+        } else if (typeof v === "object") {
+          // JSONField'lar (spec_overrides) JSON-string bo'lib boradi — backend parse qiladi.
+          fd.append(k, JSON.stringify(v));
+        } else {
+          fd.append(k, String(v));
         }
       }
       const raw = await api<Envelope<AdminTemplateDetail>>("/api/v1/admin/templates/", {

@@ -581,16 +581,18 @@ function Step3Collections({
       {editable.length === 0 ? (
         <p className="text-sm text-muted-foreground">Tahrirlash mumkin bo&apos;lgan kolleksiyalar yo&apos;q.</p>
       ) : (
-        editable.map((c) => (
-          <div key={c.name} className="space-y-2">
-            <p className="flex items-start gap-1.5 text-xs text-muted-foreground">
-              <Info className="h-3.5 w-3.5 shrink-0 mt-0.5" />
-              Bu yerga kiritilgan ma&apos;lumot shablondan yaratilgan botda paydo bo&apos;ladi.
-            </p>
-            {c.description && <p className="text-xs text-muted-foreground">{c.description}</p>}
-            <CollectionDataGrid collection={c} onChange={(data) => updateData(c.name, data)} />
-          </div>
-        ))
+        <>
+          <p className="flex items-start gap-1.5 text-xs text-muted-foreground">
+            <Info className="h-3.5 w-3.5 shrink-0 mt-0.5" />
+            Bu yerga kiritilgan ma&apos;lumot shablondan yaratilgan botda paydo bo&apos;ladi.
+          </p>
+          {editable.map((c) => (
+            <div key={c.name} className="space-y-2">
+              {c.description && <p className="text-xs text-muted-foreground">{c.description}</p>}
+              <CollectionDataGrid collection={c} onChange={(data) => updateData(c.name, data)} />
+            </div>
+          ))}
+        </>
       )}
 
       {system.length > 0 && (
