@@ -58,6 +58,15 @@ export async function createTemplateAction(body: CreateTemplateBody, image?: Fil
   }
 }
 
+export async function previewTemplateSpecAction(projectId: number) {
+  try {
+    const data = await AdminAPI.previewTemplateSpec(projectId);
+    return { ok: true as const, data };
+  } catch (e) {
+    return { ok: false as const, message: isApiError(e) ? e.message : "Xatolik yuz berdi" };
+  }
+}
+
 export async function searchProjectsAction(search: string) {
   try {
     const page = await AdminAPI.projects({ search: search || undefined, page: 1 });

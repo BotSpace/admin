@@ -257,6 +257,8 @@ export type TemplateCategory = {
 
 // Payload for POST /admin/templates/ — project is required, spec is built
 // server-side from the project's current flow/collections/credentials/modules.
+// spec_overrides lets the admin edit the auto-built credentials/modules/envs
+// before creation; flow + collections always come from the project snapshot.
 export type CreateTemplateBody = {
   project: number;
   name: string;
@@ -269,6 +271,19 @@ export type CreateTemplateBody = {
   categories?: number[];
   features?: number[];
   is_verify?: boolean;
+  spec_overrides?: {
+    credentials?: TemplateSpecCredential[];
+    modules?: TemplateSpecModule[];
+    envs?: TemplateSpecEnv[];
+  };
+};
+
+// Response of POST /admin/templates/preview-spec/ — the spec that WOULD be
+// built from the given project, without creating anything.
+export type TemplateSpecPreview = {
+  credentials: TemplateSpecCredential[];
+  modules: TemplateSpecModule[];
+  envs: TemplateSpecEnv[];
 };
 
 export type TemplateVersion = {
@@ -836,6 +851,14 @@ export const AdminAPI = {
     const raw = await api<Envelope<AdminTemplateDetail>>("/api/v1/admin/templates/", {
       method: "POST",
       json: body,
+    });
+    return unwrap(raw);
+  },
+
+  async previewTemplateSpec(project: number): Promise<TemplateSpecPreview> {
+    const raw = await api<Envelope<TemplateSpecPreview>>("/api/v1/admin/templates/preview-spec/", {
+      method: "POST",
+      json: { project },
     });
     return unwrap(raw);
   },
