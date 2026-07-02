@@ -12,14 +12,23 @@ import {
   Legend,
 } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui/card";
-import { formatTimestamp } from "./monitoring-utils";
+import { formatTimestamp, formatBytes, formatCpu, formatBps } from "./monitoring-utils";
+
+// Server Component funksiya prop uzata olmaydi (RSC serializatsiya) — shuning
+// uchun formatter nomi (diskriminator) keladi va shu yerda funksiyaga aylanadi.
+export type MetricFormat = "cpu" | "bytes" | "bps";
+const FORMATTERS: Record<MetricFormat, (v: number) => string> = {
+  cpu: (v) => formatCpu(v),
+  bytes: (v) => formatBytes(v),
+  bps: (v) => formatBps(v),
+};
 
 /** Bir chiziqli Area chart uchun series formati. */
 type SingleSeries = {
   kind: "single";
   data: [number, number][];
   color?: string;
-  formatValue?: (v: number) => string;
+  format?: MetricFormat;
 };
 
 /** Ikki chiziqli Line chart uchun series formati (masalan rx + tx). */
@@ -31,7 +40,7 @@ type DoubleSeries = {
   label2: string;
   color1?: string;
   color2?: string;
-  formatValue?: (v: number) => string;
+  format?: MetricFormat;
 };
 
 type Props = {
@@ -50,6 +59,7 @@ const PRIMARY = "oklch(0.488 0.243 264.376)";
 const SECONDARY = "oklch(0.627 0.194 154.9)";
 
 export function MetricChart({ title, series, height = 220, showDate = false }: Props) {
+  const fmt = series.format ? FORMATTERS[series.format] : undefined;
   if (series.kind === "single") {
     const chartData = buildSingleData(series.data, showDate);
     const color = series.color ?? PRIMARY;
@@ -91,14 +101,14 @@ export function MetricChart({ title, series, height = 220, showDate = false }: P
               <XAxis dataKey="label" tick={{ fontSize: 10 }} interval="preserveStartEnd" />
               <YAxis
                 tick={{ fontSize: 10 }}
-                tickFormatter={series.formatValue ?? ((v: number) => String(v))}
+                tickFormatter={fmt ?? ((v: number) => String(v))}
                 width={70}
               />
               <Tooltip
                 contentStyle={{ fontSize: 11 }}
                 labelFormatter={(v) => `Vaqt: ${v}`}
                 formatter={(v: number) => [
-                  series.formatValue ? series.formatValue(v) : v,
+                  fmt ? fmt(v) : v,
                   title,
                 ]}
               />
@@ -163,14 +173,14 @@ export function MetricChart({ title, series, height = 220, showDate = false }: P
             <XAxis dataKey="label" tick={{ fontSize: 10 }} interval="preserveStartEnd" />
             <YAxis
               tick={{ fontSize: 10 }}
-              tickFormatter={series.formatValue ?? ((v: number) => String(v))}
+              tickFormatter={fmt ?? ((v: number) => String(v))}
               width={70}
             />
             <Tooltip
               contentStyle={{ fontSize: 11 }}
               labelFormatter={(v) => `Vaqt: ${v}`}
               formatter={(v: number, name: string) => [
-                series.formatValue ? series.formatValue(v) : v,
+                fmt ? fmt(v) : v,
                 name,
               ]}
             />

@@ -165,7 +165,7 @@ export default async function MonitoringDetailPage({
             series={{
               kind: "single",
               data: history.series.cpu_cores,
-              formatValue: (v) => formatCpu(v),
+              format: "cpu",
             }}
           />
           <MetricChart
@@ -175,7 +175,7 @@ export default async function MonitoringDetailPage({
               kind: "single",
               data: history.series.memory_bytes,
               color: "oklch(0.627 0.194 154.9)",
-              formatValue: (v) => formatBytes(v),
+              format: "bytes",
             }}
           />
           <MetricChart
@@ -189,7 +189,7 @@ export default async function MonitoringDetailPage({
               label2: "Chiqish (TX)",
               color1: "oklch(0.488 0.243 264.376)",
               color2: "oklch(0.705 0.213 47.604)",
-              formatValue: (v) => formatBps(v),
+              format: "bps",
             }}
           />
           <MetricChart
@@ -199,7 +199,7 @@ export default async function MonitoringDetailPage({
               kind: "single",
               data: history.series.disk_bytes,
               color: "oklch(0.558 0.288 302.321)",
-              formatValue: (v) => formatBytes(v),
+              format: "bytes",
             }}
           />
         </div>
