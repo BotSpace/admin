@@ -194,7 +194,7 @@ export function TemplateCreateForm({ categories }: { categories: TemplateCategor
             </div>
 
             <div className="space-y-1.5">
-              <Label>Bog'langan loyiha (ixtiyoriy)</Label>
+              <Label>Bog&apos;langan loyiha (ixtiyoriy)</Label>
               <ProjectPicker value={project} onChange={setProject} />
             </div>
           </div>
