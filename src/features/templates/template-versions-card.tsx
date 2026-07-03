@@ -31,7 +31,7 @@ export function TemplateVersionsCard({
   currentVersion,
   versions,
 }: {
-  templateId: number;
+  templateId: string;
   currentVersion?: number;
   versions: TemplateVersion[];
 }) {

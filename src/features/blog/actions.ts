@@ -3,7 +3,7 @@ import { revalidatePath } from "next/cache";
 import { AdminAPI, type BlogPostInput } from "@/shared/api/services";
 import { isApiError } from "@/shared/api/client";
 
-type Result = { ok: boolean; message?: string; id?: number };
+type Result = { ok: boolean; message?: string; id?: string };
 
 function buildBody(input: BlogPostInput): BlogPostInput {
   return {
@@ -26,7 +26,7 @@ export async function createBlogPostAction(input: BlogPostInput): Promise<Result
   }
 }
 
-export async function updateBlogPostAction(id: number, input: BlogPostInput): Promise<Result> {
+export async function updateBlogPostAction(id: string, input: BlogPostInput): Promise<Result> {
   if (!input.title.trim()) return { ok: false, message: "Sarlavhani kiriting" };
   if (!input.content.trim()) return { ok: false, message: "Matnni kiriting" };
   try {
@@ -39,7 +39,7 @@ export async function updateBlogPostAction(id: number, input: BlogPostInput): Pr
   }
 }
 
-export async function deleteBlogPostAction(id: number): Promise<Result> {
+export async function deleteBlogPostAction(id: string): Promise<Result> {
   try {
     await AdminAPI.deleteBlogPost(id);
     revalidatePath("/blog");

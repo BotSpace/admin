@@ -42,7 +42,7 @@ export default async function SubmissionDetailPage({
   const { id } = await params;
   let submission;
   try {
-    submission = await AdminAPI.submission(Number(id));
+    submission = await AdminAPI.submission(id);
   } catch {
     notFound();
   }

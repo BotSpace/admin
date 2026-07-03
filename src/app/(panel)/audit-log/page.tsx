@@ -21,8 +21,8 @@ export default async function AuditLogPage({ searchParams }: { searchParams: Pro
     result = await AdminAPI.auditLog({
       action: sp.action,
       target_type: sp.target_type,
-      target_id: sp.target_id ? Number(sp.target_id) : undefined,
-      actor: sp.actor ? Number(sp.actor) : undefined,
+      target_id: sp.target_id || undefined,
+      actor: sp.actor || undefined,
       page,
     });
   } catch {

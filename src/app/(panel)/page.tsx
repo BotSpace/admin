@@ -1,8 +1,8 @@
 import { AdminAPI } from "@/shared/api/services";
 import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui/card";
 import { DashboardCharts } from "@/features/dashboard/dashboard-charts";
-import { Users, FolderOpen, LayoutTemplate, Wallet, TrendingUp } from "lucide-react";
 import { formatCurrency } from "@/shared/lib/utils";
+import { Users, FolderOpen, PackageCheck, Wallet, Banknote, UserCheck } from "lucide-react";
 
 export default async function DashboardPage() {
   let stats;
@@ -17,38 +17,38 @@ export default async function DashboardPage() {
         {
           label: "Jami foydalanuvchilar",
           value: stats.users.total,
-          sub: `+${stats.users.new_7d} (7 kun)`,
+          sub: `+${stats.users.new_today} bugun · +${stats.users.new_7d} 7 kunda`,
           icon: <Users className="h-5 w-5 text-muted-foreground" />,
         },
         {
           label: "Faol foydalanuvchilar",
           value: stats.users.active,
-          sub: `${stats.users.new_30d} yangi (30 kun)`,
-          icon: <Users className="h-5 w-5 text-emerald-500" />,
+          sub: `+${stats.users.new_30d} 30 kunda`,
+          icon: <UserCheck className="h-5 w-5 text-muted-foreground" />,
         },
         {
           label: "Jami loyihalar",
           value: stats.projects.total,
-          sub: `${stats.projects.with_release} relizda`,
+          sub: `${stats.projects.with_release} tasi reliz qilingan`,
           icon: <FolderOpen className="h-5 w-5 text-muted-foreground" />,
         },
         {
           label: "Shablonlar",
           value: stats.templates.total,
-          sub: `${stats.templates.pending_verify} kutmoqda`,
-          icon: <LayoutTemplate className="h-5 w-5 text-muted-foreground" />,
+          sub: `${stats.templates.pending_verify} ta tasdiqlashda`,
+          icon: <PackageCheck className="h-5 w-5 text-muted-foreground" />,
         },
         {
-          label: "Kutilayotgan yechimlar",
+          label: "Kutilayotgan yechishlar",
           value: stats.withdrawals.pending,
-          sub: "tasdiqlash kutmoqda",
-          icon: <Wallet className="h-5 w-5 text-amber-500" />,
+          sub: "",
+          icon: <Wallet className="h-5 w-5 text-muted-foreground" />,
         },
         {
           label: "Daromad (30 kun)",
-          value: formatCurrency(parseFloat(stats.revenue_30d || "0")),
-          sub: "UZS",
-          icon: <TrendingUp className="h-5 w-5 text-emerald-500" />,
+          value: formatCurrency(Number(stats.revenue_30d)),
+          sub: "",
+          icon: <Banknote className="h-5 w-5 text-muted-foreground" />,
         },
       ]
     : [];
@@ -85,12 +85,7 @@ export default async function DashboardPage() {
       </div>
 
       {/* Charts */}
-      {stats && (
-        <DashboardCharts
-          dailySignups={stats.daily_signups}
-          dailyOrders={stats.daily_orders}
-        />
-      )}
+      {stats && <DashboardCharts dailySignups={stats.daily_signups} dailyOrders={stats.daily_orders} />}
     </div>
   );
 }

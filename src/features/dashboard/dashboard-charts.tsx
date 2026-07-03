@@ -17,7 +17,9 @@ type DayCount = { day: string; count: number };
 
 type Props = {
   dailySignups: DayCount[];
-  dailyOrders: DayCount[];
+  // Optional: the new Go backend's dashboard stats don't compute an orders
+  // series yet, so callers that don't have one can omit it entirely.
+  dailyOrders?: DayCount[];
 };
 
 function formatDay(day: string) {
@@ -30,7 +32,7 @@ function formatDay(day: string) {
 
 export function DashboardCharts({ dailySignups, dailyOrders }: Props) {
   const signupData = dailySignups.map((d) => ({ ...d, label: formatDay(d.day) }));
-  const orderData = dailyOrders.map((d) => ({ ...d, label: formatDay(d.day) }));
+  const orderData = (dailyOrders ?? []).map((d) => ({ ...d, label: formatDay(d.day) }));
 
   return (
     <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
@@ -67,26 +69,28 @@ export function DashboardCharts({ dailySignups, dailyOrders }: Props) {
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-sm font-medium">Kunlik buyurtmalar</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <ResponsiveContainer width="100%" height={220}>
-            <BarChart data={orderData}>
-              <CartesianGrid strokeDasharray="3 3" stroke="oklch(0.922 0 0 / 50%)" />
-              <XAxis dataKey="label" tick={{ fontSize: 11 }} />
-              <YAxis tick={{ fontSize: 11 }} />
-              <Tooltip
-                contentStyle={{ fontSize: 12 }}
-                labelFormatter={(v) => `Sana: ${v}`}
-                formatter={(v: number) => [v, "Buyurtma"]}
-              />
-              <Bar dataKey="count" fill="oklch(0.488 0.243 264.376)" radius={[4, 4, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
-        </CardContent>
-      </Card>
+      {dailyOrders && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-sm font-medium">Kunlik buyurtmalar</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={220}>
+              <BarChart data={orderData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="oklch(0.922 0 0 / 50%)" />
+                <XAxis dataKey="label" tick={{ fontSize: 11 }} />
+                <YAxis tick={{ fontSize: 11 }} />
+                <Tooltip
+                  contentStyle={{ fontSize: 12 }}
+                  labelFormatter={(v) => `Sana: ${v}`}
+                  formatter={(v: number) => [v, "Buyurtma"]}
+                />
+                <Bar dataKey="count" fill="oklch(0.488 0.243 264.376)" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }

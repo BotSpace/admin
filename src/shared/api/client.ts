@@ -13,9 +13,23 @@ export type ApiOptions = RequestInit & {
   skipAuth?: boolean;
 };
 
+// All call sites hardcode paths as "/api/v1/...". Rewrite that leading
+// segment to NEXT_PUBLIC_API_PREFIX so prod can point at the gateway's
+// "/api/v2" (-> new Go backend) without touching every call site, while
+// localhost dev keeps hitting the backend's real "/api/v1" unchanged.
+export function applyApiPrefix(path: string): string {
+  const prefix = env.NEXT_PUBLIC_API_PREFIX;
+  if (prefix === "/api/v1") return path;
+  if (path === "/api/v1" || path.startsWith("/api/v1/")) {
+    return prefix + path.slice("/api/v1".length);
+  }
+  return path;
+}
+
 function buildUrl(path: string, query?: ApiOptions["query"]): string {
   const root = env.NEXT_PUBLIC_API_URL.replace(/\/$/, "");
-  const full = path.startsWith("/") ? root + path : root + "/" + path;
+  const prefixed = applyApiPrefix(path);
+  const full = prefixed.startsWith("/") ? root + prefixed : root + "/" + prefixed;
   if (!query) return full;
   const url = new URL(full);
   for (const [k, v] of Object.entries(query)) {
@@ -63,25 +77,33 @@ export async function apiFetch<T = unknown>(path: string, opts: ApiOptions = {})
   return data as T;
 }
 
+// New Go backend error envelope: { error: { code, message, details } }.
 function extractMessage(data: unknown): string | undefined {
   if (!data || typeof data !== "object") return undefined;
   const d = data as Record<string, unknown>;
-  // DRF field xatolari: { errors: { field: ["msg", ...] } } → "field: msg"
-  const errs = d["errors"];
-  if (errs && typeof errs === "object" && !Array.isArray(errs)) {
-    const parts = Object.entries(errs as Record<string, unknown>).map(
-      ([k, v]) => `${k}: ${Array.isArray(v) ? v.join(" ") : String(v)}`
-    );
-    if (parts.length) return parts.join("; ");
+  const err = d["error"];
+  if (err && typeof err === "object") {
+    const e = err as Record<string, unknown>;
+    if (typeof e["message"] === "string") return e["message"];
+    if (typeof e["code"] === "string") return e["code"];
   }
-  for (const key of ["detail", "message", "error", "errors"]) {
+  for (const key of ["detail", "message"]) {
     const v = d[key];
-    // "ValidationError" o'zi ma'nosiz — field xatolarini afzal ko'ramiz
-    if (typeof v === "string" && v !== "ValidationError") return v;
-    if (Array.isArray(v) && typeof v[0] === "string") return v[0];
+    if (typeof v === "string") return v;
   }
-  // {status, data:{...}} envelope — ichkariga kiramiz
-  if (d["data"] && typeof d["data"] === "object") return extractMessage(d["data"]);
+  return undefined;
+}
+
+/** Machine-readable error code from the new backend's {error:{code,...}} envelope. */
+export function apiErrorCode(e: unknown): string | undefined {
+  if (!e || typeof e !== "object") return undefined;
+  const details = (e as ApiError).details;
+  if (!details || typeof details !== "object") return undefined;
+  const err = (details as Record<string, unknown>)["error"];
+  if (err && typeof err === "object") {
+    const code = (err as Record<string, unknown>)["code"];
+    if (typeof code === "string") return code;
+  }
   return undefined;
 }
 

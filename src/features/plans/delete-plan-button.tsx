@@ -5,7 +5,7 @@ import { Button } from "@/shared/components/ui/button";
 import { Trash2 } from "lucide-react";
 import { deletePlanAction } from "./actions";
 
-export function DeletePlanButton({ id, name }: { id: number; name: string }) {
+export function DeletePlanButton({ id, name }: { id: string; name: string }) {
   async function handle() {
     const res = await deletePlanAction(id);
     if (res.ok) toast.success("Tarif o'chirildi");

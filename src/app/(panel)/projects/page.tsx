@@ -128,7 +128,7 @@ export default async function ProjectsPage({
               header: "Egasi",
               cell: (p) => (
                 <span className="text-sm text-muted-foreground">
-                  {p.owner_phone ?? `#${p.owner}`}
+                  {p.owner_phone ?? `#${p.owner_id}`}
                 </span>
               ),
             },

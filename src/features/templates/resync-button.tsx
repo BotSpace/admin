@@ -5,7 +5,7 @@ import { Button } from "@/shared/components/ui/button";
 import { RefreshCw } from "lucide-react";
 import { resyncTemplateAction } from "./actions";
 
-export function ResyncButton({ id }: { id: number }) {
+export function ResyncButton({ id }: { id: string }) {
   async function handle() {
     const res = await resyncTemplateAction(id);
     if (res.ok) {

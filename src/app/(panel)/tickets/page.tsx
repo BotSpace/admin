@@ -64,7 +64,10 @@ export default async function TicketsPage({ searchParams }: { searchParams: Prom
                         </p>
                       )}
                       <p className="mt-0.5 text-xs text-muted-foreground">
-                        {tk.user_phone ?? `#${tk.user}`} · {format(new Date(tk.created_at), "dd.MM.yyyy HH:mm")}
+                        {/* Backend doesn't join requester identity onto ticket list/detail yet */}
+                        {tk.user_phone ?? (tk.user ? `#${tk.user}` : null)}
+                        {tk.user_phone || tk.user ? " · " : ""}
+                        {format(new Date(tk.created_at), "dd.MM.yyyy HH:mm")}
                       </p>
                     </div>
                     <span className="shrink-0 text-xs text-primary">Ko&apos;rish →</span>

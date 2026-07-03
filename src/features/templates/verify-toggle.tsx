@@ -5,7 +5,7 @@ import { Button } from "@/shared/components/ui/button";
 import { CheckCircle, XCircle } from "lucide-react";
 import { verifyTemplateAction } from "./actions";
 
-export function VerifyToggle({ id, isVerify, name }: { id: number; isVerify: boolean; name: string }) {
+export function VerifyToggle({ id, isVerify, name }: { id: string; isVerify: boolean; name: string }) {
   async function handle() {
     const res = await verifyTemplateAction(id, !isVerify);
     if (res.ok) {

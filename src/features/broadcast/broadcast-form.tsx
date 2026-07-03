@@ -56,7 +56,7 @@ export function BroadcastForm({ projects }: Props) {
     }
 
     startSend(async () => {
-      const res = await sendBroadcastAction(Number(projectId), caption.trim());
+      const res = await sendBroadcastAction(projectId, caption.trim());
       if (res.ok) {
         toast.success("Broadcast yuborildi", {
           description: `Jami: ${res.data.total} ta foydalanuvchi`,
@@ -64,7 +64,7 @@ export function BroadcastForm({ projects }: Props) {
         setCaption("");
         // refresh list
         startList(async () => {
-          const lr = await listBroadcastsAction(Number(projectId));
+          const lr = await listBroadcastsAction(projectId);
           if (lr.ok) setMessages(lr.data);
         });
       } else {
@@ -79,7 +79,7 @@ export function BroadcastForm({ projects }: Props) {
       return;
     }
     startList(async () => {
-      const res = await listBroadcastsAction(Number(projectId));
+      const res = await listBroadcastsAction(projectId);
       if (res.ok) {
         setMessages(res.data);
         setListLoaded(true);

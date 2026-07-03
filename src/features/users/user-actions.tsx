@@ -14,7 +14,6 @@ import {
 } from "@/shared/components/ui/dialog";
 import { Input } from "@/shared/components/ui/input";
 import { Label } from "@/shared/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/components/ui/select";
 import { banUserAction, adjustBalanceAction } from "./actions";
 import { ShieldOff, ShieldCheck, DollarSign } from "lucide-react";
 
@@ -63,24 +62,24 @@ function BanToggle({ user }: { user: AdminUserDetail }) {
 
 function BalanceDialog({ user }: { user: AdminUserDetail }) {
   const [open, setOpen] = useState(false);
-  const [field, setField] = useState<"balance" | "template_balance">("balance");
-  const [value, setValue] = useState("");
-  const [note, setNote] = useState("");
+  const [delta, setDelta] = useState("");
+  const [reason, setReason] = useState("");
   const [loading, setLoading] = useState(false);
 
   async function handle() {
-    if (!value.trim()) {
-      toast.error("Miqdorni kiriting");
+    const n = Math.trunc(Number(delta));
+    if (!delta.trim() || Number.isNaN(n) || n === 0) {
+      toast.error("O'zgarish miqdorini kiriting (musbat yoki manfiy, butun son)");
       return;
     }
     setLoading(true);
-    const res = await adjustBalanceAction(user.id, field, value, note || undefined);
+    const res = await adjustBalanceAction(user.id, n, reason || undefined);
     setLoading(false);
     if (res.ok) {
       toast.success("Balans yangilandi");
       setOpen(false);
-      setValue("");
-      setNote("");
+      setDelta("");
+      setReason("");
     } else {
       toast.error(res.message);
     }
@@ -98,33 +97,29 @@ function BalanceDialog({ user }: { user: AdminUserDetail }) {
           <DialogTitle>Balans tahrirlash</DialogTitle>
         </DialogHeader>
         <div className="space-y-4 py-2">
+          <p className="text-xs text-muted-foreground">
+            Faqat asosiy balans (UZS) o&apos;zgartiriladi — shablon balansini tuzatish hali
+            qo&apos;llab-quvvatlanmaydi. Hozirgi balans:{" "}
+            <span className="font-mono font-medium text-foreground">
+              {user.balance.toLocaleString("uz-UZ")}
+            </span>
+          </p>
           <div className="space-y-2">
-            <Label>Maydon</Label>
-            <Select value={field} onValueChange={(v) => setField(v as "balance" | "template_balance")}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="balance">Balans (UZS)</SelectItem>
-                <SelectItem value="template_balance">Shablon balansi</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-2">
-            <Label>Yangi qiymat</Label>
+            <Label>O&apos;zgarish (+/-)</Label>
             <Input
               type="number"
-              placeholder="0.00"
-              value={value}
-              onChange={(e) => setValue(e.target.value)}
+              step="1"
+              placeholder="Musbat = qo'shish, manfiy = ayirish"
+              value={delta}
+              onChange={(e) => setDelta(e.target.value)}
             />
           </div>
           <div className="space-y-2">
-            <Label>Izoh (ixtiyoriy)</Label>
+            <Label>Sabab (ixtiyoriy)</Label>
             <Input
               placeholder="Sabab..."
-              value={note}
-              onChange={(e) => setNote(e.target.value)}
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
             />
           </div>
         </div>

@@ -67,7 +67,7 @@ export default async function UserDetailPage({
   const { id } = await params;
   let user: AdminUserDetail;
   try {
-    user = await AdminAPI.user(Number(id));
+    user = await AdminAPI.user(id);
   } catch {
     notFound();
   }
@@ -91,7 +91,11 @@ export default async function UserDetailPage({
       <div className="flex items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold">{fullName}</h1>
-          <p className="text-muted-foreground text-sm">{user.phone || user.email || `#${user.id}`}</p>
+          <p className="text-muted-foreground text-sm">
+            {/* Telegram orqali kirgan foydalanuvchilarda telefon bo'sh bo'lishi
+                mumkin — email ham bo'lmasa ismga tushamiz. */}
+            {user.phone || user.email || fullName || `#${user.id}`}
+          </p>
         </div>
         <div className="flex items-center gap-2 flex-wrap justify-end">
           <Badge variant={user.is_active ? "success" : "destructive"}>

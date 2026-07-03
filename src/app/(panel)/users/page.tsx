@@ -121,15 +121,18 @@ export default async function UsersPage({
             {
               key: "phone",
               header: "Telefon / Email",
-              cell: (u) => (
-                <Link
-                  href={`/users/${u.id}`}
-                  className="hover:underline text-sm"
-                >
-                  {/* Google orqali kirganlarda telefon yo'q — emailni ko'rsatamiz */}
-                  {u.phone || u.email || "—"}
-                </Link>
-              ),
+              cell: (u) => {
+                // Telegram orqali kirganlarda telefon (ba'zan email ham) yo'q
+                // bo'ladi — bunday holda ism-familiyaga tushamiz, qator bo'sh
+                // qolmasin.
+                const fullName = [u.first_name, u.last_name].filter(Boolean).join(" ");
+                const label = u.phone || u.email || fullName || u.username || "—";
+                return (
+                  <Link href={`/users/${u.id}`} className="hover:underline text-sm">
+                    {label}
+                  </Link>
+                );
+              },
             },
             {
               key: "name",

@@ -3,7 +3,7 @@ import { revalidatePath } from "next/cache";
 import { AdminAPI } from "@/shared/api/services";
 import { isApiError } from "@/shared/api/client";
 
-export async function deleteProjectAction(id: number) {
+export async function deleteProjectAction(id: string) {
   try {
     await AdminAPI.deleteProject(id);
     revalidatePath("/projects");

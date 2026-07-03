@@ -13,7 +13,7 @@ import {
 import { Button } from "@/shared/components/ui/button";
 import { ChevronDown, ChevronUp } from "lucide-react";
 
-type CategoryOption = { id: number; name: string };
+type CategoryOption = { id: string; name: string };
 
 type Props = {
   defaultSearch?: string;

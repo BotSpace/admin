@@ -6,7 +6,7 @@ export const metadata = { title: "AI Sozlamalari | BotSpace Admin" };
 export default async function AiSettingsPage() {
   let configs;
   try {
-    configs = await AdminAPI.configs();
+    configs = await AdminAPI.aiAgentSettings();
   } catch {
     configs = null;
   }

@@ -32,28 +32,22 @@ async function refreshTokens(
   refresh: string
 ): Promise<{ access: string; refresh: string } | null> {
   try {
-    const url = env.NEXT_PUBLIC_API_URL.replace(/\/$/, "") + "/auth/token/refresh/";
+    // New Go backend: POST /api/v1/auth/refresh {refresh_token} → flat
+    // {access_token, refresh_token, ...} — no nested data/token envelope.
+    // NEXT_PUBLIC_API_PREFIX lets prod rewrite this to /api/v2 (gateway ->
+    // new Go backend) while localhost keeps hitting /api/v1 directly.
+    const url =
+      env.NEXT_PUBLIC_API_URL.replace(/\/$/, "") + env.NEXT_PUBLIC_API_PREFIX + "/auth/refresh";
     const r = await fetch(url, {
       method: "POST",
       headers: { "content-type": "application/json", accept: "application/json" },
-      body: JSON.stringify({ refresh }),
+      body: JSON.stringify({ refresh_token: refresh }),
       cache: "no-store",
     });
     if (!r.ok) return null;
-    const data = (await r.json()) as Record<string, unknown>;
-    const root =
-      (data?.data && typeof data.data === "object"
-        ? (data.data as Record<string, unknown>)
-        : data) ?? {};
-    const token =
-      (root?.token && typeof root.token === "object"
-        ? (root.token as Record<string, unknown>)
-        : root) ?? {};
-    const access = (token?.access ?? root?.access) as string | undefined;
-    const newRefresh =
-      ((token?.refresh ?? root?.refresh) as string | undefined) ?? refresh;
-    if (!access) return null;
-    return { access, refresh: newRefresh };
+    const data = (await r.json()) as { access_token?: string; refresh_token?: string };
+    if (!data.access_token) return null;
+    return { access: data.access_token, refresh: data.refresh_token ?? refresh };
   } catch {
     return null;
   }
@@ -127,6 +121,7 @@ function clearSessionCookie(response: NextResponse) {
 
 export default async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
+  if (pathname === "/login") return NextResponse.next();
 
   const cookieValue = request.cookies.get(env.SESSION_COOKIE_NAME)?.value;
   const state = await loadSession(cookieValue);
@@ -139,17 +134,10 @@ export default async function middleware(request: NextRequest) {
   const isAuthed = state.kind === "valid" || state.kind === "refreshed";
 
   if (!isAuthed) {
-    const dashboardUrl = env.NEXT_PUBLIC_DASHBOARD_URL.replace(/\/$/, "");
-    // Behind the gateway the request URL host is the internal pod address
-    // (localhost:3020). Rebuild the public origin from forwarded headers so
-    // the login `from` points back to admin.botspace.uz, not localhost.
-    const fwdProto = request.headers.get("x-forwarded-proto") ?? "https";
-    const fwdHost = request.headers.get("x-forwarded-host") ?? request.headers.get("host");
-    const publicUrl = fwdHost
-      ? `${fwdProto}://${fwdHost}${request.nextUrl.pathname}${request.nextUrl.search}`
-      : request.url;
-    const from = encodeURIComponent(publicUrl);
-    const loginUrl = `${dashboardUrl}/login?from=${from}`;
+    // This admin app now ships its own /login page (src/app/login) that
+    // authenticates directly against the new Go backend, so unauthenticated
+    // requests are sent there instead of the separate dashboard app.
+    const loginUrl = new URL("/login", request.url);
     const redirect = NextResponse.redirect(loginUrl);
     if (state.kind === "broken") clearSessionCookie(redirect);
     return redirect;

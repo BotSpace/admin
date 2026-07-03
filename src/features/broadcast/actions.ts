@@ -11,7 +11,7 @@ export type ListResult =
   | { ok: false; message: string };
 
 export async function sendBroadcastAction(
-  projectId: number,
+  projectId: string,
   caption: string
 ): Promise<SendResult> {
   try {
@@ -22,7 +22,7 @@ export async function sendBroadcastAction(
   }
 }
 
-export async function listBroadcastsAction(projectId: number): Promise<ListResult> {
+export async function listBroadcastsAction(projectId: string): Promise<ListResult> {
   try {
     const data = await AdminAPI.broadcastList(projectId);
     return { ok: true, data };

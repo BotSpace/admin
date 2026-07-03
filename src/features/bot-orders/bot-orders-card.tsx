@@ -40,8 +40,8 @@ export async function BotOrdersCard({
   owner,
   title = "Botdan tushgan to'lovlar",
 }: {
-  project?: number;
-  owner?: number;
+  project?: string;
+  owner?: string;
   title?: string;
 }) {
   // Foydalanuvchi rejimida qaysi bot ekanini ko'rsatamiz; bot rejimida bot ma'lum.

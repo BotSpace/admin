@@ -7,7 +7,7 @@ import { replyTicketAction } from "@/features/tickets/actions";
 import { Button } from "@/shared/components/ui/button";
 import { Textarea } from "@/shared/components/ui/textarea";
 
-export function TicketReplyForm({ id }: { id: number }) {
+export function TicketReplyForm({ id }: { id: string }) {
   const router = useRouter();
   const action = replyTicketAction.bind(null, id);
   const [state, formAction, pending] = useActionState(action, undefined);

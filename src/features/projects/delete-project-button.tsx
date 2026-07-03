@@ -5,7 +5,7 @@ import { Button } from "@/shared/components/ui/button";
 import { Trash2 } from "lucide-react";
 import { deleteProjectAction } from "./actions";
 
-export function DeleteProjectButton({ id, name }: { id: number; name: string }) {
+export function DeleteProjectButton({ id, name }: { id: string; name: string }) {
   async function handle() {
     const res = await deleteProjectAction(id);
     if (res.ok) {

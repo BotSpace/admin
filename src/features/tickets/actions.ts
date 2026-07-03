@@ -6,7 +6,7 @@ import { isApiError } from "@/shared/api/client";
 type Result = { ok: boolean; message?: string };
 
 export async function replyTicketAction(
-  id: number,
+  id: string,
   _prev: Result | undefined,
   formData: FormData,
 ): Promise<Result> {
@@ -29,7 +29,7 @@ export async function replyTicketAction(
   }
 }
 
-export async function closeTicketAction(id: number): Promise<Result> {
+export async function closeTicketAction(id: string): Promise<Result> {
   try {
     await AdminAPI.closeTicket(id);
     revalidatePath(`/tickets/${id}`);

@@ -53,7 +53,7 @@ export default async function PlansPage() {
                   <TableCell className="font-mono">{formatCurrency(parseFloat(plan.price))}</TableCell>
                   <TableCell>{plan.max_bots === 0 ? "cheksiz" : plan.max_bots}</TableCell>
                   <TableCell className="font-mono text-xs">
-                    {(plan.max_input_tokens + plan.max_output_tokens).toLocaleString()}
+                    {((plan.max_input_tokens ?? 0) + (plan.max_output_tokens ?? 0)).toLocaleString()}
                   </TableCell>
                   <TableCell>
                     {plan.is_top && <Badge variant="default">Top</Badge>}

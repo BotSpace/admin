@@ -1,31 +1,24 @@
 "use server";
 import { revalidatePath } from "next/cache";
-import { AdminAPI, type PlatformConfig } from "@/shared/api/services";
+import { AdminAPI, type AiAgentSettings } from "@/shared/api/services";
 import { isApiError } from "@/shared/api/client";
 
-export type ConfigResult =
-  | { ok: true; data: PlatformConfig }
+export type AiSettingsResult =
+  | { ok: true; data: AiAgentSettings }
   | { ok: false; message: string };
 
-export type ConfigsResult =
-  | { ok: true; data: PlatformConfig[] }
-  | { ok: false; message: string };
-
-export async function getConfigsAction(): Promise<ConfigsResult> {
+export async function getAiSettingsAction(): Promise<AiSettingsResult> {
   try {
-    const data = await AdminAPI.configs();
+    const data = await AdminAPI.aiAgentSettings();
     return { ok: true, data };
   } catch (e) {
     return { ok: false, message: isApiError(e) ? e.message : "Xatolik yuz berdi" };
   }
 }
 
-export async function updateConfigAction(
-  key: string,
-  value: string
-): Promise<ConfigResult> {
+export async function updateAiSettingsAction(body: AiAgentSettings): Promise<AiSettingsResult> {
   try {
-    const data = await AdminAPI.updateConfig(key, value);
+    const data = await AdminAPI.updateAiAgentSettings(body);
     revalidatePath("/settings/ai");
     return { ok: true, data };
   } catch (e) {

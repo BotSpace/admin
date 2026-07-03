@@ -1,10 +1,9 @@
-import { notFound } from "next/navigation";
 import Link from "next/link";
 import { Suspense } from "react";
 import { AdminAPI } from "@/shared/api/services";
 import { MetricChart } from "@/features/monitoring/metric-chart";
 import { RangeSelector } from "@/features/monitoring/range-selector";
-import { formatBytes, formatCpu, formatBps } from "@/features/monitoring/monitoring-utils";
+import { formatBytes, formatCpu } from "@/features/monitoring/monitoring-utils";
 import { Badge } from "@/shared/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui/card";
 import { ChevronLeft } from "lucide-react";
@@ -50,16 +49,18 @@ export default async function MonitoringDetailPage({
     // Loyiha usage ma'lumotlarini monitoring list'dan bitta element sifatida olish.
     // Agar alohida detail endpoint bo'lmasa, list'dan id bo'yicha filter qilamiz.
     const page = await AdminAPI.monitoring({ page: 1 });
-    usage = page.results.find((r) => r.id === Number(id)) ?? null;
+    usage = page.results.find((r) => r.id === id) ?? null;
   } catch {
     usage = null;
   }
 
   let history;
   try {
-    history = await AdminAPI.monitoringHistory(Number(id), range);
+    history = await AdminAPI.monitoringHistory(id, range);
   } catch {
-    notFound();
+    // No time-series history endpoint on this backend — degrade to showing
+    // the current snapshot only instead of 404ing the whole page.
+    history = null;
   }
 
   // Agar usage topilmasa — history'dan minimal ma'lumot olish yetarli
@@ -142,19 +143,21 @@ export default async function MonitoringDetailPage({
       )}
 
       {/* Prometheus ogohlantirish */}
-      {history && !history.prometheus_available && (
+      {(!history || !history.prometheus_available) && (
         <div className="rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:border-amber-700 dark:bg-amber-900/20 dark:text-amber-300">
           Prometheus ulanmagan — CPU, RAM va Tarmoq grafiklari ko&apos;rsatilmaydi.
         </div>
       )}
 
       {/* Range tanlagich */}
-      <div className="flex items-center justify-between gap-4">
-        <h2 className="text-sm font-semibold text-muted-foreground">Tarix</h2>
-        <Suspense>
-          <RangeSelector current={range} />
-        </Suspense>
-      </div>
+      {history && (
+        <div className="flex items-center justify-between gap-4">
+          <h2 className="text-sm font-semibold text-muted-foreground">Tarix</h2>
+          <Suspense>
+            <RangeSelector current={range} />
+          </Suspense>
+        </div>
+      )}
 
       {/* Chartlar */}
       {history && (

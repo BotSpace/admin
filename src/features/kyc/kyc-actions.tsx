@@ -17,7 +17,7 @@ import { Label } from "@/shared/components/ui/label";
 import { CheckCircle, XCircle } from "lucide-react";
 import { approveKycAction, rejectKycAction } from "./actions";
 
-export function KycActions({ id }: { id: number }) {
+export function KycActions({ id }: { id: string }) {
   const router = useRouter();
   async function handleApprove() {
     const res = await approveKycAction(id);
@@ -46,7 +46,7 @@ export function KycActions({ id }: { id: number }) {
   );
 }
 
-function RejectDialog({ id }: { id: number }) {
+function RejectDialog({ id }: { id: string }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [reason, setReason] = useState("");

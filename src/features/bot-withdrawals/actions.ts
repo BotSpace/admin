@@ -3,7 +3,7 @@ import { revalidatePath } from "next/cache";
 import { AdminAPI } from "@/shared/api/services";
 import { isApiError } from "@/shared/api/client";
 
-export async function approveBotWithdrawalAction(id: number, note?: string) {
+export async function approveBotWithdrawalAction(id: string, note?: string) {
   try {
     await AdminAPI.approveBotWithdrawal(id, { note });
     revalidatePath("/bot-withdrawals");
@@ -13,7 +13,7 @@ export async function approveBotWithdrawalAction(id: number, note?: string) {
   }
 }
 
-export async function rejectBotWithdrawalAction(id: number, rejection_reason: string) {
+export async function rejectBotWithdrawalAction(id: string, rejection_reason: string) {
   try {
     await AdminAPI.rejectBotWithdrawal(id, { rejection_reason });
     revalidatePath("/bot-withdrawals");

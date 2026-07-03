@@ -1,34 +1,26 @@
 "use server";
 import { revalidatePath } from "next/cache";
-import { AdminAPI, type SettingGroup } from "@/shared/api/services";
+import { AdminAPI, type GeneralSettings } from "@/shared/api/services";
 import { isApiError } from "@/shared/api/client";
 
-export type SettingsResult =
-  | { ok: true; data: SettingGroup[] }
+export type GeneralSettingsResult =
+  | { ok: true; data: GeneralSettings }
   | { ok: false; message: string };
 
-export type SetSettingResult =
-  | { ok: true }
-  | { ok: false; message: string };
-
-export async function getSettingsAction(): Promise<SettingsResult> {
+export async function getGeneralSettingsAction(): Promise<GeneralSettingsResult> {
   try {
-    const data = await AdminAPI.getSettings();
+    const data = await AdminAPI.generalSettings();
     return { ok: true, data };
   } catch (e) {
     return { ok: false, message: isApiError(e) ? e.message : "Sozlamalarni yuklashda xatolik" };
   }
 }
 
-export async function setSettingAction(
-  settings_key: string,
-  option_key: string,
-  value: string[]
-): Promise<SetSettingResult> {
+export async function updateGeneralSettingsAction(body: GeneralSettings): Promise<GeneralSettingsResult> {
   try {
-    await AdminAPI.setSetting(settings_key, option_key, value);
+    const data = await AdminAPI.updateGeneralSettings(body);
     revalidatePath("/settings/general");
-    return { ok: true };
+    return { ok: true, data };
   } catch (e) {
     return { ok: false, message: isApiError(e) ? e.message : "Saqlashda xatolik yuz berdi" };
   }

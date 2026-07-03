@@ -9,8 +9,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/shared/components/ui/table";
-import { CredentialTypeFormDialog } from "@/features/credential-types/credential-type-form-dialog";
-import { DeleteCredentialTypeButton } from "@/features/credential-types/delete-credential-type-button";
 import { CredentialTypesSourceTabs } from "@/features/credential-types/credential-types-source-tabs";
 
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
@@ -89,11 +87,11 @@ export default async function CredentialTypesPage({
         <div>
           <h1 className="text-2xl font-bold">Credential turlari</h1>
           <p className="text-muted-foreground text-sm">
-            Barcha credential type&apos;lar: kod ichidagi (o&apos;zgarmas), admin tomonidan
-            yaratilgan va modul manifestlaridan kelgan.
+            Barcha credential type&apos;lar ro&apos;yxati — kod ichida (registry.go) qat&apos;iy
+            belgilangan, shuning uchun faqat ko&apos;rish uchun: yaratish/tahrirlash/o&apos;chirish
+            bu backendda mavjud emas.
           </p>
         </div>
-        <CredentialTypeFormDialog />
       </div>
 
       {/* Source tabs */}
@@ -171,17 +169,7 @@ export default async function CredentialTypesPage({
                   </TableCell>
                   <TableCell>{sourceBadge(t.source)}</TableCell>
                   <TableCell>
-                    {t.editable ? (
-                      <div className="flex items-center gap-1">
-                        <CredentialTypeFormDialog credentialType={t} />
-                        <DeleteCredentialTypeButton
-                          credentialKey={t.key}
-                          label={t.label}
-                        />
-                      </div>
-                    ) : (
-                      <span className="text-xs text-muted-foreground">faqat ko&apos;rish</span>
-                    )}
+                    <span className="text-xs text-muted-foreground">faqat ko&apos;rish</span>
                   </TableCell>
                 </TableRow>
               ))}

@@ -29,7 +29,7 @@ export default async function TransactionDetailPage({
   const { id } = await params;
   let transaction: AdminTransactionDetail;
   try {
-    transaction = await AdminAPI.transaction(Number(id));
+    transaction = await AdminAPI.transaction(id);
   } catch {
     notFound();
   }

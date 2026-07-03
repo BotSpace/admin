@@ -36,7 +36,7 @@ export default async function BotWithdrawalDetailPage({ params }: { params: Prom
 
   let w;
   try {
-    w = await AdminAPI.botWithdrawal(Number(id));
+    w = await AdminAPI.botWithdrawal(id);
   } catch {
     notFound();
   }

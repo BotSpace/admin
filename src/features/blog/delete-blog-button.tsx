@@ -5,7 +5,7 @@ import { Button } from "@/shared/components/ui/button";
 import { Trash2 } from "lucide-react";
 import { deleteBlogPostAction } from "./actions";
 
-export function DeleteBlogButton({ id, title }: { id: number; title: string }) {
+export function DeleteBlogButton({ id, title }: { id: string; title: string }) {
   async function handle() {
     const res = await deleteBlogPostAction(id);
     if (res.ok) {

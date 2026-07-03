@@ -10,7 +10,7 @@ import { ShieldOff } from "lucide-react";
 export default async function PanelLayout({ children }: { children: React.ReactNode }) {
   const session = await readSession();
   if (!session) {
-    redirect(`${env.NEXT_PUBLIC_DASHBOARD_URL}/login`);
+    redirect("/login");
   }
 
   let me;

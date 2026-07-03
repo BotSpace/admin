@@ -6,12 +6,11 @@ import { BlogForm } from "@/features/blog/blog-form";
 
 export default async function EditBlogPostPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const numericId = Number(id);
-  if (!Number.isFinite(numericId)) notFound();
+  if (!id) notFound();
 
   let post;
   try {
-    post = await AdminAPI.blogPost(numericId);
+    post = await AdminAPI.blogPost(id);
   } catch {
     notFound();
   }

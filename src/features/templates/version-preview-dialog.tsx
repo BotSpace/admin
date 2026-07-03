@@ -14,7 +14,7 @@ import { format } from "date-fns";
 import { templateVersionAction } from "./actions";
 import { type TemplateVersionDetail } from "@/shared/api/services";
 
-export function VersionPreviewDialog({ templateId, version }: { templateId: number; version: number }) {
+export function VersionPreviewDialog({ templateId, version }: { templateId: string; version: number }) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [detail, setDetail] = useState<TemplateVersionDetail | null>(null);

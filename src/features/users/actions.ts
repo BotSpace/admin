@@ -3,7 +3,7 @@ import { revalidatePath } from "next/cache";
 import { AdminAPI } from "@/shared/api/services";
 import { isApiError } from "@/shared/api/client";
 
-export async function banUserAction(id: number, is_active: boolean, note?: string) {
+export async function banUserAction(id: string, is_active: boolean, note?: string) {
   try {
     await AdminAPI.banUser(id, { is_active, note });
     revalidatePath(`/users/${id}`);
@@ -14,14 +14,9 @@ export async function banUserAction(id: number, is_active: boolean, note?: strin
   }
 }
 
-export async function adjustBalanceAction(
-  id: number,
-  field: "balance" | "template_balance",
-  value: string,
-  note?: string
-) {
+export async function adjustBalanceAction(id: string, delta: number, reason?: string) {
   try {
-    await AdminAPI.adjustBalance(id, { field, value, note });
+    await AdminAPI.adjustBalance(id, { delta, reason });
     revalidatePath(`/users/${id}`);
     return { ok: true };
   } catch (e) {

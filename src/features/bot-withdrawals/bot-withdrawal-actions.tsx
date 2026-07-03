@@ -17,7 +17,7 @@ import { Label } from "@/shared/components/ui/label";
 import { CheckCircle, XCircle } from "lucide-react";
 import { approveBotWithdrawalAction, rejectBotWithdrawalAction } from "./actions";
 
-export function BotWithdrawalActions({ id }: { id: number }) {
+export function BotWithdrawalActions({ id }: { id: string }) {
   const router = useRouter();
   async function handleApprove() {
     const res = await approveBotWithdrawalAction(id);
@@ -46,7 +46,7 @@ export function BotWithdrawalActions({ id }: { id: number }) {
   );
 }
 
-function RejectDialog({ id }: { id: number }) {
+function RejectDialog({ id }: { id: string }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [reason, setReason] = useState("");

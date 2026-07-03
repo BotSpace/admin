@@ -1,7 +1,17 @@
 import "server-only";
 import { api, apiFetch } from "./server";
+import type { ApiError } from "./client";
+import { PAGINATION_SIZE } from "@/shared/lib/constants";
 
-// ── Pagination envelope ────────────────────────────────────────────────────
+// ────────────────────────────────────────────────────────────────────────
+// Pagination
+//
+// The new Go backend returns { items, total, limit, offset } on every list
+// endpoint (no envelope). The admin UI (already written) reads the OLD
+// Django-shaped Page<T> = { results, total_items, total_pages, current_page,
+// page_size } throughout every list page. Rather than touch every page.tsx,
+// AdminAPI translates the new envelope into the old shape at the edge here.
+// ────────────────────────────────────────────────────────────────────────
 
 export type Page<T> = {
   results: T[];
@@ -11,16 +21,38 @@ export type Page<T> = {
   page_size: number;
 };
 
-type Envelope<T> = { data: T };
+type RawPage<T> = { items: T[]; total: number; limit: number; offset: number };
 
-function unwrap<T>(raw: Envelope<T>): T {
-  return raw.data;
+function toPage<T>(raw: RawPage<T>): Page<T> {
+  const page_size = raw.limit > 0 ? raw.limit : PAGINATION_SIZE;
+  const current_page = Math.floor(raw.offset / page_size) + 1;
+  const total_pages = Math.max(1, Math.ceil(raw.total / page_size));
+  return { results: raw.items, total_items: raw.total, total_pages, current_page, page_size };
+}
+
+/** 1-based `page` (old convention) → `{limit, offset}` (new backend convention). */
+function toOffset(page?: number, limit: number = PAGINATION_SIZE): { limit: number; offset: number } {
+  const p = page && page > 0 ? page : 1;
+  return { limit, offset: (p - 1) * limit };
+}
+
+/** Marks an AdminAPI method backed by an endpoint the new Go backend does not
+ * (yet) expose. Throws an ApiError-shaped rejection so every call site's
+ * existing try/catch renders its normal empty/error state instead of
+ * crashing — see report for the full list of missing endpoints. */
+function unavailable(feature: string): never {
+  const err: ApiError = {
+    status: 501,
+    message: `${feature} — yangi backendda hali mavjud emas`,
+  };
+  throw err;
 }
 
 // ── Stats ──────────────────────────────────────────────────────────────────
 
+// Mirrors administration.DashboardStatsResponse.
 export type DashboardStats = {
-  users: { total: number; active: number; new_7d: number; new_30d: number };
+  users: { total: number; active: number; new_today: number; new_7d: number; new_30d: number };
   projects: { total: number; with_release: number };
   templates: { total: number; pending_verify: number };
   withdrawals: { pending: number };
@@ -31,9 +63,9 @@ export type DashboardStats = {
 
 // ── User types ─────────────────────────────────────────────────────────────
 
-/** Lightweight shape used in the list view */
+/** Mirrors user.UserResponse (both list + detail — the Go backend has one shape). */
 export type AdminUser = {
-  id: number;
+  id: string;
   phone: string;
   email: string;
   username: string;
@@ -42,12 +74,46 @@ export type AdminUser = {
   role: string;
   balance: number;
   template_balance: string;
-  tokens_used_total: number;
   is_active: boolean;
+  is_kyc_verified: boolean;
+  validated_at: string | null;
+  created_at: string;
+  updated_at: string;
+  // ── Compatibility fields the new backend does NOT return ──
+  // is_staff/is_superuser are derived from `role`.
   is_staff: boolean;
   is_superuser: boolean;
-  date_joined: string;
+  date_joined: string; // alias of created_at
+  tokens_used_total: number; // always 0 — not tracked per-user by this backend
 };
+
+function toAdminUser(u: {
+  id: string;
+  phone: string;
+  email?: string;
+  username?: string;
+  first_name: string;
+  last_name: string;
+  role: string;
+  balance: number;
+  template_balance: string;
+  is_active: boolean;
+  is_kyc_verified: boolean;
+  validated_at: string | null;
+  created_at: string;
+  updated_at: string;
+}): AdminUser {
+  return {
+    ...u,
+    email: u.email ?? "",
+    username: u.username ?? "",
+    is_active: u.is_active,
+    is_staff: u.role === "admin",
+    is_superuser: u.role === "superuser",
+    date_joined: u.created_at,
+    tokens_used_total: 0,
+  };
+}
 
 export type AdminUserSubscription = {
   plan: string;
@@ -65,16 +131,16 @@ export type AdminUserSubscription = {
 };
 
 export type AdminUserProject = {
-  id: number;
+  id: string;
   name: string;
-  username: string;
+  username?: string;
   is_template: boolean;
   created_at: string;
 };
 
 export type AdminUserPurchasedTemplate = {
-  id: number;
-  template_id: number;
+  id: string;
+  template_id: string;
   template_name: string;
   amount: string;
   status: string;
@@ -83,7 +149,7 @@ export type AdminUserPurchasedTemplate = {
 };
 
 export type AdminUserAuthoredTemplate = {
-  id: number;
+  id: string;
   name: string;
   slug: string;
   is_verify: boolean;
@@ -92,22 +158,12 @@ export type AdminUserAuthoredTemplate = {
   created_at: string;
 };
 
-/** Rich shape returned by GET /api/v1/admin/users/{id}/ */
-export type AdminUserDetail = {
-  id: number;
-  phone: string;
-  email: string;
-  username: string;
-  first_name: string;
-  last_name: string;
-  role: string;
-  is_active: boolean;
-  is_staff: boolean;
-  is_superuser: boolean;
-  date_joined: string;
-  validated_at: string | null;
-  balance: number;
-  template_balance: string;
+// GET /api/v1/users/{id} returns an enriched detail projection: the flat
+// UserResponse fields plus subscription/projects/template counts. NOTE:
+// purchased_templates/authored_templates always ship as empty arrays server
+// side (see user.AdminDetailResponse) — only the *_count fields are real;
+// there is no per-row purchased/authored template listing yet.
+export type AdminUserDetail = AdminUser & {
   subscription: AdminUserSubscription | null;
   projects: AdminUserProject[];
   projects_count: number;
@@ -117,29 +173,54 @@ export type AdminUserDetail = {
   authored_count: number;
 };
 
+function toAdminUserDetail(
+  u: Parameters<typeof toAdminUser>[0] & {
+    subscription: AdminUserSubscription | null;
+    projects: AdminUserProject[];
+    projects_count: number;
+    purchased_templates: AdminUserPurchasedTemplate[];
+    purchased_count: number;
+    authored_templates: AdminUserAuthoredTemplate[];
+    authored_count: number;
+  }
+): AdminUserDetail {
+  return {
+    ...toAdminUser(u),
+    subscription: u.subscription,
+    projects: u.projects ?? [],
+    projects_count: u.projects_count ?? 0,
+    purchased_templates: u.purchased_templates ?? [],
+    purchased_count: u.purchased_count ?? 0,
+    authored_templates: u.authored_templates ?? [],
+    authored_count: u.authored_count ?? 0,
+  };
+}
+
 // ── Project types ──────────────────────────────────────────────────────────
 
+// Mirrors project.ProjectResponse. NOTE: GET /api/v1/projects is owner-scoped
+// (no admin-wide listing exists on this backend) — see report.
 export type AdminProject = {
-  id: number;
+  id: string;
+  uuid?: string;
   name: string;
   description?: string;
   username?: string;
-  owner_id?: number;
+  owner_id?: string;
   owner_phone?: string;
   is_template?: boolean;
   release_webhook_uuid?: string;
-  // Oxirgi relizning holati (running/active/stopped/...) yoki null (reliz yo'q).
+  debug_webhook_uuid?: string;
   release_status?: string | null;
   created_at: string;
   updated_at?: string;
-  // legacy fields kept for backward compat
-  owner?: number;
+  owner?: string;
   is_active?: boolean;
   has_release?: boolean;
 };
 
 export type AdminProjectRelease = {
-  id: number;
+  id: string;
   version: string;
   status: string;
   service_id?: string;
@@ -147,44 +228,37 @@ export type AdminProjectRelease = {
   node_count?: number;
 };
 
-export type AdminProjectDetail = {
-  id: number;
-  name: string;
-  description?: string;
-  username?: string;
-  is_template: boolean;
-  owner: { id: number; phone: string; email?: string };
-  release_webhook_uuid?: string;
-  debug_webhook_uuid?: string;
+export type AdminProjectDetail = AdminProject & {
+  owner: { id: string; phone: string; email?: string };
   mongo_database?: string;
-  current_node_count: number;
+  // Not returned by GET /api/v1/admin/projects/{id} (admin.AdminProjectDetailResponse
+  // carries no node/flow data — see project.dto.go) — always undefined.
+  current_node_count?: number;
   releases: AdminProjectRelease[];
   releases_count: number;
-  created_at: string;
-  updated_at?: string;
 };
 
 // ── Template types ─────────────────────────────────────────────────────────
 
+// Mirrors template.AdminTemplateResponse (admin-wide listing projection —
+// GET /api/v1/admin/templates). Always includes the resolved author name/
+// phone (fixes the old "#undefined" author bug) and the real is_verify/
+// status regardless of publish state.
 export type AdminTemplate = {
-  id: number;
+  id: string;
   name: string;
-  slug?: string;
+  slug: string;
   image?: string;
-  demo_url?: string;
-  short_description?: string;
-  original_price?: string;
-  discount?: string;
-  discount_type?: string;
-  views?: number;
-  author_id?: number;
+  author_id?: string;
+  author_name?: string;
   author_phone?: string;
-  // legacy fields kept for backward compat
-  description?: string;
-  author?: number;
-  author_username?: string;
+  status: string; // "verified" | "pending"
   is_verify: boolean;
+  views: number;
+  price?: string;
+  original_price?: string;
   created_at: string;
+  updated_at?: string;
 };
 
 export type TemplateSpecCredential = {
@@ -195,17 +269,8 @@ export type TemplateSpecCredential = {
   description?: string;
 };
 
-export type TemplateSpecModule = {
-  slug: string;
-  required: boolean;
-};
-
-export type TemplateSpecEnv = {
-  key: string;
-  required: boolean;
-  label?: string;
-  description?: string;
-};
+export type TemplateSpecModule = { slug: string; required: boolean };
+export type TemplateSpecEnv = { key: string; required: boolean; label?: string; description?: string };
 
 export type TemplateSpecCollectionField = {
   name: string;
@@ -234,79 +299,65 @@ export type TemplateSpec = {
   envs?: TemplateSpecEnv[];
 };
 
-// Credential type registry entry (source: "code" | "admin" | "module:<slug>").
-export type CredentialTypeInfo = {
-  key: string;
-  label?: string;
-  source?: string;
-};
+export type CredentialTypeInfo = { key: string; label?: string; source?: string };
+export type ModuleCatalogItem = { slug: string; name?: string; description?: string };
 
-// Module catalog entry — template spec'dagi modul slug select uchun.
-export type ModuleCatalogItem = {
-  slug: string;
-  name?: string;
+// Mirrors template.AdminTemplateDetailResponse (GET /api/v1/admin/templates/{id}).
+// NOTE: this backend has no spec/version/node-count/orders/resync surface for
+// admin-created templates (those were speculative fields from an earlier UI
+// iteration) — required_envs is the raw json.RawMessage array from the DB.
+export type AdminTemplateDetail = AdminTemplate & {
+  video?: string;
+  project_id?: string;
+  short_description?: string;
   description?: string;
+  discount?: string;
+  discount_type?: string;
+  likes_count?: number;
+  demo_url?: string;
+  categories: { id: string; name: string }[];
+  features: { id: string; name: string }[];
+  required_envs?: unknown;
 };
 
-export type AdminTemplateDetail = {
-  id: number;
+export type TemplateCategory = { id: string; name: string };
+
+// Mirrors template.CreateAdminTemplateRequest — a direct admin create that
+// bypasses the author submission/review flow. No image/video file upload:
+// both are plain URL strings the admin must already have hosted somewhere.
+export type CreateTemplateBody = {
   name: string;
   slug?: string;
+  author_id?: string;
+  project_id?: string;
   image?: string;
-  demo_url?: string;
+  video?: string;
   short_description?: string;
   description?: string;
   original_price?: string;
   discount?: string;
-  discount_type?: string;
-  is_verify: boolean;
-  views: number;
-  likes?: number;
-  author: { id: number; phone: string };
-  categories: { id: number; name: string }[];
-  features: { id: number; name: string }[];
-  orders_total: number;
-  orders_confirmed: number;
-  node_count?: number;
-  required_envs?: { key: string; description?: string }[];
-  spec?: TemplateSpec;
-  version?: number;
-  has_project?: boolean;
-  created_at: string;
-  updated_at?: string;
-};
-
-export type TemplateCategory = {
-  id: number;
-  name: string;
-};
-
-// Payload for POST /admin/templates/ — project is required, spec is built
-// server-side from the project's current flow/collections/credentials/modules.
-// spec_overrides lets the admin edit the auto-built credentials/modules/envs
-// before creation; flow + collections always come from the project snapshot.
-export type CreateTemplateBody = {
-  project: number;
-  name: string;
-  short_description?: string;
-  description?: string;
-  original_price: string;
-  discount?: string;
   discount_type?: "percent" | "amount";
   demo_url?: string;
-  categories?: number[];
-  features?: number[];
   is_verify?: boolean;
-  spec_overrides?: {
-    credentials?: TemplateSpecCredential[];
-    modules?: TemplateSpecModule[];
-    envs?: TemplateSpecEnv[];
-    collections?: TemplateSpecCollection[];
-  };
+  category_ids?: string[];
 };
 
-// Response of POST /admin/templates/preview-spec/ — the spec that WOULD be
-// built from the given project, without creating anything.
+// Mirrors template.UpdateAdminTemplateRequest. Slug/author/project are
+// immutable after creation (no fields for them here).
+export type UpdateTemplateBody = Partial<{
+  name: string;
+  image: string;
+  video: string;
+  short_description: string;
+  description: string;
+  original_price: string;
+  discount: string;
+  discount_type: "percent" | "amount";
+  demo_url: string;
+  is_verify: boolean;
+  category_ids: string[];
+}>;
+
 export type TemplateSpecPreview = {
   credentials: TemplateSpecCredential[];
   modules: TemplateSpecModule[];
@@ -322,29 +373,27 @@ export type TemplateVersion = {
   is_current: boolean;
 };
 
-export type TemplateVersionDetail = {
-  version: number;
-  note?: string | null;
-  spec: TemplateSpec;
-  created_at: string;
-};
+export type TemplateVersionDetail = { version: number; note?: string | null; spec: TemplateSpec; created_at: string };
 
+// Mirrors template.SubmissionResponse.
 export type TemplateSubmission = {
-  id: number;
-  template: number;
-  // list fields (new contract)
+  id: string;
+  template: string;
+  project_id?: string;
   name?: string;
   user_phone?: string;
   project_name?: string;
-  // legacy detail fields kept for backward compat
   template_name?: string;
-  submitted_by?: number;
+  submitted_by?: string;
   submitted_by_phone?: string;
+  short_description?: string;
   description?: string;
-  categories?: { id: number; name: string }[];
-  features?: { id: number; name: string }[];
+  original_price?: string;
+  categories?: { id: string; name: string }[];
+  features?: { id: string; name: string }[];
   required_envs?: { key: string; description?: string }[];
   status: "pending" | "approved" | "rejected";
+  rejection_reason?: string;
   note?: string;
   created_at: string;
   updated_at?: string;
@@ -352,24 +401,29 @@ export type TemplateSubmission = {
 
 // ── Withdrawal types ───────────────────────────────────────────────────────
 
+// Template-author earnings withdrawal — mirrors template.WithdrawalResponse
+// (GET/PATCH /api/v1/template/withdrawals/admin). The admin listing does NOT
+// join the requesting user's id/phone — see report.
 export type Withdrawal = {
-  id: number;
-  user: number;
+  id: string;
+  user?: string;
   user_phone?: string;
   amount: string;
+  card_number?: string;
+  card_owner?: string;
   status: "pending" | "approved" | "rejected";
   rejection_reason?: string;
   note?: string;
   created_at: string;
 };
 
-// ── Bot earnings withdrawal types ──────────────────────────────────────────
-
+// Bot earnings withdrawal — mirrors payment.WithdrawalResponse
+// (GET/PATCH /api/v1/admin/payment/withdrawals). Same user-join gap as above.
 export type BotWithdrawal = {
-  id: number;
-  user: number;
+  id: string;
+  user?: string;
   user_phone?: string;
-  project: number | null;
+  project: string | null;
   project_name?: string | null;
   amount: string;
   card_number: string;
@@ -381,9 +435,10 @@ export type BotWithdrawal = {
 
 // ── KYC verification types ─────────────────────────────────────────────────
 
+// Mirrors kyc.AdminVerificationResponse.
 export type KycVerification = {
-  id: number;
-  user: number;
+  id: string;
+  user: string;
   user_phone?: string;
   full_name: string;
   passport_image: string;
@@ -396,35 +451,39 @@ export type KycVerification = {
 
 // ── Support ticket types ─────────────────────────────────────────────────────
 
+// Mirrors ticket.TicketMessageResponse / TicketResponse.
 export type AdminTicketMessage = {
-  id: number;
+  id: string;
   sender: "user" | "admin";
   message: string;
   attachment?: string | null;
+  attachment_url?: string;
   created_at: string;
 };
 
 export type AdminTicket = {
-  id: number;
-  user: number;
+  id: string;
+  user?: string;
   user_phone?: string;
   subject: string;
   status: "open" | "pending" | "closed";
   created_at: string;
   updated_at?: string;
   messages?: AdminTicketMessage[];
+  last_message?: { sender: string; message: string } | null;
 };
 
 // ── Blog types ───────────────────────────────────────────────────────────────
 
+// Mirrors blog.AdminBlogPostResponse — full admin CRUD exists on this backend.
 export type AdminBlogPost = {
-  id: number;
+  id: string;
   title: string;
   slug: string;
   excerpt: string;
   content: string;
   is_published: boolean;
-  author: number | null;
+  author: string | null;
   author_name: string | null;
   reading_time: number;
   published_at: string | null;
@@ -432,38 +491,32 @@ export type AdminBlogPost = {
   updated_at: string;
 };
 
-export type BlogPostInput = {
-  title: string;
-  excerpt?: string;
-  content: string;
-  is_published?: boolean;
-};
+export type BlogPostInput = { title: string; excerpt?: string; content: string; is_published?: boolean };
 
-// ── Transaction types ──────────────────────────────────────────────────────
+// ── Transaction types (NOT available admin-wide — see report) ──────────────
 
 export type Transaction = {
-  id: number;
-  user?: number;
-  user_id?: number;
+  id: string;
+  user?: string;
+  user_id?: string;
   user_phone?: string;
   amount: string;
   status?: boolean;
   idempotency_key?: string;
   created_at: string;
   updated_at?: string;
-  // legacy fields kept for backward compat
   type?: string;
   description?: string;
 };
 
 export type AdminTransaction = Transaction;
 
-// Bot payment order (botdan tushgan to'lov) — PaymentOrderModel admin ko'rinishi.
+// Mirrors payment.OrderResponse (bot payment order).
 export type AdminBotOrder = {
-  id: number;
-  project: number;
+  id: string;
+  project: string;
   project_name: string | null;
-  owner: number;
+  owner: string;
   owner_phone: string | null;
   payer_chat_id: number | null;
   payer_first_name: string | null;
@@ -482,116 +535,116 @@ export type AdminBotOrder = {
   updated_at: string;
 };
 
-export type AdminTransactionDetail = {
-  id: number;
-  user?: number;
-  user_id?: number;
-  user_phone?: string;
-  amount: string;
-  status?: boolean;
-  idempotency_key?: string;
-  created_at: string;
-  updated_at?: string;
-};
+export type AdminTransactionDetail = Transaction;
 
 // ── Plan types ─────────────────────────────────────────────────────────────
 
+// Mirrors plan.PlanResponse. GET /api/v1/plans is public/read-only — the new
+// backend has no admin create/update/delete for plans. See report.
 export type Plan = {
-  id: number;
+  id: string;
   name: string;
+  name_display?: string;
   price: string;
   max_bots: number;
-  max_input_tokens: number;
-  max_output_tokens: number;
+  max_tokens?: number;
+  max_input_tokens?: number;
+  max_output_tokens?: number;
   description?: string;
   is_top: boolean;
   is_active: boolean;
-  order: number;
+  order?: number;
   features?: Record<string, unknown> | string[];
 };
 
 // ── Broadcast / Message types ──────────────────────────────────────────────
 
+// Mirrors message.MessageResponse (GET/POST /api/v1/messages, project-scoped
+// to the caller's own projects).
 export type BroadcastMessage = {
-  id: number;
+  id: string;
+  project_id?: string;
   caption: string;
   message_type: string;
+  button_type?: string;
   status: string;
   total: number;
   done: number;
   fail: number;
 };
 
-export type SendBroadcastBody = {
-  project: number;
-  caption: string;
-};
+export type SendBroadcastBody = { project: string; caption: string };
 
 // ── Audit log types ────────────────────────────────────────────────────────
 
+// Mirrors administration.AuditLogResponse — note the flatter shape: one
+// "target" string (no separate target_type/target_id), "metadata" instead of
+// payload_before/payload_after, no "ip_address"/"note" fields.
 export type AuditLog = {
-  id: number;
-  actor: number;
+  id: string;
+  actor: string | null;
   actor_phone?: string;
   action: string;
+  target?: string;
   target_type?: string;
-  target_id?: number;
+  target_id?: string;
+  metadata?: unknown;
   payload_before?: unknown;
   payload_after?: unknown;
+  ip?: string;
   ip_address?: string;
   note?: string;
   created_at: string;
 };
 
-// ── Platform config types ──────────────────────────────────────────────────
+// ── Platform config / general settings (legacy generic shape — NOT
+// available on this backend; see report) ────────────────────────────────
 
-export type PlatformConfig = {
-  key: string;
-  value: string;
-  label: string;
-  group: string;
-  is_public: boolean;
+export type PlatformConfig = { key: string; value: string; label: string; group: string; is_public: boolean };
+export type SettingOption = { key: string; value: string[] };
+export type SettingGroup = { key: string; description: string; is_public: boolean; options: SettingOption[] };
+
+// ── Real admin settings store (GET/PUT /api/v1/admin/settings/{general,ai}) ─
+
+export type GeneralSettings = {
+  site_name: string;
+  support_email: string;
+  support_phone: string;
+  default_language: string;
+  maintenance_mode: boolean;
+  commission_percent: number;
 };
 
-// ── General settings types (shared app SettingsModel / OptionsModel) ───────
-
-export type SettingOption = {
-  key: string;
-  value: string[];
-};
-
-export type SettingGroup = {
-  key: string;
-  description: string;
-  is_public: boolean;
-  options: SettingOption[];
+export type AiAgentSettings = {
+  provider: string;
+  model: string;
+  api_key: string;
+  max_tokens: number;
+  temperature: number;
+  system_prompt_override: string;
 };
 
 // ── Me ─────────────────────────────────────────────────────────────────────
 
 export type MeResponse = {
-  id: number;
+  id: string;
   phone: string;
   email?: string;
   username?: string;
   first_name?: string;
   last_name?: string;
+  role?: string;
   is_staff: boolean;
   is_superuser: boolean;
 };
 
-// Re-export for server-side usage (client-side import module-status.ts directly)
 export type { ModuleStatus } from "./module-status";
 
-export type AdminModuleNode = {
-  type: string;
-  title: string;
-  category: string;
-  trigger: boolean;
-};
+export type AdminModuleNode = { type: string; title: string; category: string; trigger: boolean };
 
+// Mirrors plugin.ModuleResponse.
 export type AdminModule = {
-  id: number;
+  id: string;
   slug: string;
   name: string;
   description: string;
@@ -621,13 +674,13 @@ export type AdminModuleInput = {
   is_default?: boolean;
 };
 
-// ── Monitoring types ───────────────────────────────────────────────────────
+// ── Monitoring (NOT available — see report) ─────────────────────────────────
 
 export type AdminProjectUsage = {
-  id: number;
+  id: string;
   name: string;
   username: string | null;
-  owner_id: number;
+  owner_id: string;
   owner_phone: string | null;
   owner_name: string | null;
   release_status: string | null;
@@ -637,9 +690,7 @@ export type AdminProjectUsage = {
   created_at: string;
 };
 
-export type MonitoringPage = Page<AdminProjectUsage> & {
-  prometheus_available: boolean;
-};
+export type MonitoringPage = Page<AdminProjectUsage> & { prometheus_available: boolean };
 
 export type MonitoringHistorySeries = {
   cpu_cores: [number, number][];
@@ -656,12 +707,9 @@ export type MonitoringHistory = {
   series: MonitoringHistorySeries;
 };
 
-// ── Credential type types ──────────────────────────────────────────────────
+// ── Credential type types ───────────────────────────────────────────────────
 
-export type CredentialFieldOption = {
-  value: string;
-  label: string;
-};
+export type CredentialFieldOption = { value: string; label: string };
 
 export type CredentialField = {
   name: string;
@@ -673,6 +721,9 @@ export type CredentialField = {
   options?: CredentialFieldOption[];
 };
 
+// Mirrors credential.TypeResponse (GET /api/v1/credentials/types). NOTE: the
+// new backend only exposes read on this list — no admin create/update/delete
+// route exists (see report), unlike the old `editable` field's promise.
 export type CredentialType = {
   key: string;
   label: string;
@@ -700,14 +751,25 @@ export type CredentialTypePatch = Partial<Omit<CredentialTypeInput, "key">>;
 export const AdminAPI = {
   // Auth
   async me(): Promise<MeResponse> {
-    const raw = await api<Envelope<MeResponse>>("/api/v1/auth/me/");
-    return unwrap(raw);
+    const u = await api<{
+      id: string;
+      phone: string;
+      email?: string;
+      username?: string;
+      first_name?: string;
+      last_name?: string;
+      role: string;
+    }>("/api/v1/users/me");
+    return {
+      ...u,
+      is_staff: u.role === "admin",
+      is_superuser: u.role === "superuser",
+    };
   },
 
   // Stats
   async stats(): Promise<DashboardStats> {
-    const raw = await api<Envelope<DashboardStats>>("/api/v1/admin/stats/dashboard/");
-    return unwrap(raw);
+    return api<DashboardStats>("/api/v1/admin/stats/dashboard");
   },
 
   // Users
@@ -724,40 +786,57 @@ export const AdminAPI = {
     ordering?: string;
     page?: number;
   }): Promise<Page<AdminUser>> {
-    const raw = await api<Envelope<Page<AdminUser>>>("/api/v1/admin/users/", {
-      query: params as Record<string, string | number | boolean | undefined | null>,
+    // Only `search` + pagination are supported server-side; the rest of the
+    // old filter set (role/is_active/plan/date range/balance range/ordering)
+    // has no backend support yet and is silently ignored — see report.
+    const { limit, offset } = toOffset(params?.page);
+    const raw = await api<RawPage<Parameters<typeof toAdminUser>[0]>>("/api/v1/users", {
+      query: { search: params?.search, limit, offset },
     });
-    return unwrap(raw);
+    return toPage({ ...raw, items: raw.items.map(toAdminUser) });
   },
 
-  async user(id: number): Promise<AdminUserDetail> {
-    const raw = await api<Envelope<AdminUserDetail>>(`/api/v1/admin/users/${id}/`);
-    return unwrap(raw);
+  async user(id: string): Promise<AdminUserDetail> {
+    const raw = await api<Parameters<typeof toAdminUserDetail>[0]>(`/api/v1/users/${id}`);
+    return toAdminUserDetail(raw);
   },
 
-  async banUser(
-    id: number,
-    body: { is_active: boolean; note?: string }
-  ): Promise<AdminUserDetail> {
-    const raw = await api<Envelope<AdminUserDetail>>(`/api/v1/admin/users/${id}/ban/`, {
+  // body.is_active is the *desired* new state (the UI passes !user.is_active
+  // to toggle) — routed to the real /ban or /unban endpoint accordingly.
+  // Neither endpoint accepts a body, so `note` is not supported and dropped.
+  async banUser(id: string, body: { is_active: boolean; note?: string }): Promise<AdminUserDetail> {
+    const path = body.is_active
+      ? `/api/v1/admin/users/${id}/unban`
+      : `/api/v1/admin/users/${id}/ban`;
+    await api(path, { method: "POST" });
+    return AdminAPI.user(id);
+  },
+
+  // Signed delta (positive credits, negative debits) against the main
+  // balance only — the backend has no adjust-endpoint for template_balance.
+  async adjustBalance(id: string, body: { delta: number; reason?: string }): Promise<AdminUserDetail> {
+    await api(`/api/v1/admin/users/${id}/balance`, {
+      method: "POST",
+      json: { delta: body.delta, reason: body.reason },
+    });
+    return AdminAPI.user(id);
+  },
+
+  async setUserRole(id: string, role: "user" | "admin" | "superuser"): Promise<AdminUserDetail> {
+    // The role endpoint returns the plain UserResponse (no subscription/
+    // projects enrichment) — refetch the enriched detail afterwards so the
+    // return shape matches AdminAPI.user().
+    await api<Parameters<typeof toAdminUser>[0]>(`/api/v1/users/${id}/role`, {
       method: "PATCH",
-      json: body,
+      json: { role },
     });
-    return unwrap(raw);
+    return AdminAPI.user(id);
   },
 
-  async adjustBalance(
-    id: number,
-    body: { field: "balance" | "template_balance"; value: string; note?: string }
-  ): Promise<AdminUserDetail> {
-    const raw = await api<Envelope<AdminUserDetail>>(`/api/v1/admin/users/${id}/balance/`, {
-      method: "PATCH",
-      json: body,
-    });
-    return unwrap(raw);
-  },
-
-  // Projects
+  // Projects — admin-wide (all owners). Only `search` + pagination are
+  // supported server-side (project.AdminList); owner/is_template/has_release/
+  // date-range/ordering filters from the old UI have no backend support yet
+  // and are silently ignored.
   async projects(params?: {
     search?: string;
     owner?: string;
@@ -768,22 +847,26 @@ export const AdminAPI = {
     ordering?: string;
     page?: number;
   }): Promise<Page<AdminProject>> {
-    const raw = await api<Envelope<Page<AdminProject>>>("/api/v1/admin/projects/", {
-      query: params as Record<string, string | number | boolean | undefined | null>,
+    const { limit, offset } = toOffset(params?.page);
+    const raw = await api<RawPage<AdminProject>>("/api/v1/admin/projects", {
+      query: { search: params?.search, limit, offset },
     });
-    return unwrap(raw);
+    return toPage(raw);
   },
 
-  async project(id: number): Promise<AdminProjectDetail> {
-    const raw = await api<Envelope<AdminProjectDetail>>(`/api/v1/admin/projects/${id}/`);
-    return unwrap(raw);
+  async project(id: string): Promise<AdminProjectDetail> {
+    return api<AdminProjectDetail>(`/api/v1/admin/projects/${id}`);
   },
 
-  async deleteProject(id: number): Promise<void> {
-    await api<void>(`/api/v1/admin/projects/${id}/`, { method: "DELETE" });
+  async deleteProject(id: string): Promise<void> {
+    await api<void>(`/api/v1/projects/${id}`, { method: "DELETE" });
   },
 
-  // Templates
+  // Templates — full admin CRUD via /admin/templates (template.AdminList/
+  // AdminGet/AdminCreate/AdminUpdate/AdminDelete/AdminVerify/AdminReject).
+  // Only `search` + `is_verify` + pagination are supported server-side;
+  // category/author/price range/date range/ordering from the old UI have no
+  // backend support yet and are silently ignored.
   async templates(params?: {
     search?: string;
     is_verify?: string;
@@ -796,148 +879,90 @@ export const AdminAPI = {
     ordering?: string;
     page?: number;
   }): Promise<Page<AdminTemplate>> {
-    const raw = await api<Envelope<Page<AdminTemplate>>>("/api/v1/admin/templates/", {
-      query: params as Record<string, string | number | boolean | undefined | null>,
+    const { limit, offset } = toOffset(params?.page);
+    const raw = await api<RawPage<AdminTemplate>>("/api/v1/admin/templates", {
+      query: { search: params?.search, is_verify: params?.is_verify, limit, offset },
     });
-    return unwrap(raw);
+    return toPage(raw);
   },
 
-  async template(id: number): Promise<AdminTemplateDetail> {
-    const raw = await api<Envelope<AdminTemplateDetail>>(`/api/v1/admin/templates/${id}/`);
-    return unwrap(raw);
+  async template(id: string): Promise<AdminTemplateDetail> {
+    return api<AdminTemplateDetail>(`/api/v1/admin/templates/${id}`);
   },
 
-  async verifyTemplate(
-    id: number,
-    body: { is_verify: boolean; note?: string }
-  ): Promise<AdminTemplate> {
-    const raw = await api<Envelope<AdminTemplate>>(`/api/v1/admin/templates/${id}/verify/`, {
-      method: "PATCH",
-      json: body,
-    });
-    return unwrap(raw);
+  async verifyTemplate(id: string, body: { is_verify: boolean; note?: string }): Promise<void> {
+    // note is not supported by this backend (endpoints accept no body) — dropped.
+    const path = body.is_verify
+      ? `/api/v1/admin/templates/${id}/verify`
+      : `/api/v1/admin/templates/${id}/reject`;
+    await api(path, { method: "PATCH", json: {} });
   },
 
-  async updateTemplate(
-    id: number,
-    body: Partial<Pick<AdminTemplateDetail, "name" | "short_description" | "description" | "original_price" | "discount" | "discount_type" | "is_verify" | "demo_url" | "spec">>,
-    image?: File | Blob
-  ): Promise<AdminTemplateDetail> {
-    if (image) {
-      const fd = new FormData();
-      fd.append("image", image);
-      for (const [k, v] of Object.entries(body)) {
-        if (v !== undefined && v !== null) {
-          fd.append(k, typeof v === "object" ? JSON.stringify(v) : String(v));
-        }
-      }
-      const raw = await api<Envelope<AdminTemplateDetail>>(`/api/v1/admin/templates/${id}/`, {
-        method: "PATCH",
-        body: fd,
-      });
-      return unwrap(raw);
-    }
-    const raw = await api<Envelope<AdminTemplateDetail>>(`/api/v1/admin/templates/${id}/`, {
-      method: "PATCH",
-      json: body,
-    });
-    return unwrap(raw);
+  async updateTemplate(id: string, body: UpdateTemplateBody): Promise<AdminTemplateDetail> {
+    await api(`/api/v1/admin/templates/${id}`, { method: "PATCH", json: body });
+    return AdminAPI.template(id);
   },
 
-  async resyncTemplate(id: number): Promise<AdminTemplateDetail> {
-    const raw = await api<Envelope<AdminTemplateDetail>>(`/api/v1/admin/templates/${id}/resync/`, {
-      method: "PATCH",
-      json: {},
-    });
-    return unwrap(raw);
+  async resyncTemplate(_id: string): Promise<AdminTemplateDetail> {
+    return unavailable("Shablonni qayta sinxronlash");
   },
 
   async templateCategories(): Promise<TemplateCategory[]> {
-    type CatEnvelope = { status: boolean; data: { results: TemplateCategory[] } | TemplateCategory[] };
-    const raw = await apiFetch<CatEnvelope>("/api/v1/template/category/");
-    const d = raw.data;
-    if (Array.isArray(d)) return d as TemplateCategory[];
-    if (d && typeof d === "object" && "results" in d) return (d as { results: TemplateCategory[] }).results;
-    return [];
+    return apiFetch<TemplateCategory[]>("/api/v1/template/category");
   },
 
   async modulesCatalog(): Promise<ModuleCatalogItem[]> {
-    type ModEnvelope = { status: boolean; data: { results: ModuleCatalogItem[] } | ModuleCatalogItem[] };
-    const raw = await apiFetch<ModEnvelope>("/api/v1/modules/?active=true");
-    const d = raw.data;
-    if (Array.isArray(d)) return d;
-    if (d && typeof d === "object" && "results" in d) return (d as { results: ModuleCatalogItem[] }).results;
-    return [];
+    const raw = await apiFetch<RawPage<ModuleCatalogItem>>("/api/v1/modules", { query: { active: "true" } });
+    return raw.items ?? [];
   },
 
-  async createTemplate(body: CreateTemplateBody, image?: File | Blob): Promise<AdminTemplateDetail> {
-    if (image) {
-      const fd = new FormData();
-      fd.append("image", image);
-      for (const [k, v] of Object.entries(body)) {
-        if (v === undefined || v === null) continue;
-        if (Array.isArray(v)) {
-          // DRF many=True field'lari takroriy key kutadi: categories=1&categories=2.
-          for (const item of v) fd.append(k, String(item));
-        } else if (typeof v === "object") {
-          // JSONField'lar (spec_overrides) JSON-string bo'lib boradi — backend parse qiladi.
-          fd.append(k, JSON.stringify(v));
-        } else {
-          fd.append(k, String(v));
-        }
-      }
-      const raw = await api<Envelope<AdminTemplateDetail>>("/api/v1/admin/templates/", {
-        method: "POST",
-        body: fd,
-      });
-      return unwrap(raw);
-    }
-    const raw = await api<Envelope<AdminTemplateDetail>>("/api/v1/admin/templates/", {
+  async createTemplate(body: CreateTemplateBody): Promise<AdminTemplateDetail> {
+    const created = await api<{ id: string }>("/api/v1/admin/templates", {
       method: "POST",
-      json: body,
+      json: {
+        name: body.name,
+        slug: body.slug || undefined,
+        author_id: body.author_id || undefined,
+        project_id: body.project_id || undefined,
+        image: body.image || undefined,
+        video: body.video || undefined,
+        short_description: body.short_description || undefined,
+        description: body.description || undefined,
+        original_price: body.original_price || undefined,
+        discount: body.discount || undefined,
+        discount_type: body.discount_type || undefined,
+        demo_url: body.demo_url || undefined,
+        is_verify: body.is_verify ?? false,
+        category_ids: body.category_ids?.length ? body.category_ids : undefined,
+      },
     });
-    return unwrap(raw);
+    return AdminAPI.template(created.id);
   },
 
-  async previewTemplateSpec(project: number): Promise<TemplateSpecPreview> {
-    const raw = await api<Envelope<TemplateSpecPreview>>("/api/v1/admin/templates/preview-spec/", {
-      method: "POST",
-      json: { project },
-    });
-    return unwrap(raw);
+  async previewTemplateSpec(_project: string): Promise<TemplateSpecPreview> {
+    return unavailable("Shablon spec preview");
   },
 
-  async deleteTemplate(id: number, force?: boolean): Promise<void> {
-    await api(`/api/v1/admin/templates/${id}/`, {
-      method: "DELETE",
-      query: force ? { force: "true" } : undefined,
-    });
+  async deleteTemplate(id: string): Promise<void> {
+    await api<void>(`/api/v1/admin/templates/${id}`, { method: "DELETE" });
   },
 
-  async templateVersions(id: number): Promise<TemplateVersion[]> {
-    const raw = await api<Envelope<TemplateVersion[]>>(`/api/v1/admin/templates/${id}/versions/`);
-    return unwrap(raw);
+  async templateVersions(_id: string): Promise<TemplateVersion[]> {
+    return unavailable("Shablon versiyalari");
   },
 
-  async templateVersion(id: number, version: number): Promise<TemplateVersionDetail> {
-    const raw = await api<Envelope<TemplateVersionDetail>>(
-      `/api/v1/admin/templates/${id}/versions/${version}/`
-    );
-    return unwrap(raw);
+  async templateVersion(_id: string, _version: number): Promise<TemplateVersionDetail> {
+    return unavailable("Shablon versiyasi");
   },
 
-  async rollbackTemplate(
-    id: number,
-    body: { version: number; note?: string }
-  ): Promise<AdminTemplateDetail> {
-    const raw = await api<Envelope<AdminTemplateDetail>>(`/api/v1/admin/templates/${id}/rollback/`, {
-      method: "POST",
-      json: body,
-    });
-    return unwrap(raw);
+  async rollbackTemplate(_id: string, _body: { version: number; note?: string }): Promise<AdminTemplateDetail> {
+    return unavailable("Shablonni versiyaga qaytarish");
   },
 
-  // Template submissions
+  // Template submissions (review queue) — list/approve/reject are admin-only
+  // and work; get-by-id/update reuse the self-service endpoint which is
+  // ownership-scoped to the submitter, so an admin viewing/editing another
+  // user's submission may 403 — see report.
   async submissions(params?: {
     status?: string;
     search?: string;
@@ -948,69 +973,62 @@ export const AdminAPI = {
     ordering?: string;
     page?: number;
   }): Promise<Page<TemplateSubmission>> {
-    const raw = await api<Envelope<Page<TemplateSubmission>>>("/api/v1/admin/template-submissions/", {
-      query: params as Record<string, string | number | boolean | undefined | null>,
+    const { limit, offset } = toOffset(params?.page);
+    const raw = await api<RawPage<TemplateSubmission>>("/api/v1/template/submissions/admin", {
+      query: { status: params?.status, limit, offset },
     });
-    return unwrap(raw);
+    return toPage(raw);
   },
 
-  async approveSubmission(id: number, body?: { note?: string }): Promise<TemplateSubmission> {
-    const raw = await api<Envelope<TemplateSubmission>>(
-      `/api/v1/admin/template-submissions/${id}/approve/`,
-      { method: "PATCH", json: body ?? {} }
-    );
-    return unwrap(raw);
-  },
-
-  async rejectSubmission(id: number, body?: { note?: string }): Promise<TemplateSubmission> {
-    const raw = await api<Envelope<TemplateSubmission>>(
-      `/api/v1/admin/template-submissions/${id}/reject/`,
-      { method: "PATCH", json: body ?? {} }
-    );
-    return unwrap(raw);
-  },
-
-  async submission(id: number): Promise<TemplateSubmission> {
-    const raw = await api<Envelope<TemplateSubmission>>(`/api/v1/admin/template-submissions/${id}/`);
-    return unwrap(raw);
-  },
-
-  async updateSubmission(
-    id: number,
-    body: Partial<Pick<TemplateSubmission, "name" | "description" | "status" | "note"> & { categories?: number[]; features?: number[] }>
-  ): Promise<TemplateSubmission> {
-    const raw = await api<Envelope<TemplateSubmission>>(
-      `/api/v1/admin/template-submissions/${id}/`,
-      { method: "PATCH", json: body }
-    );
-    return unwrap(raw);
-  },
-
-  // Withdrawals
-  async withdrawals(params?: { status?: string; page?: number }): Promise<Page<Withdrawal>> {
-    const raw = await api<Envelope<Page<Withdrawal>>>("/api/v1/admin/withdrawals/", {
-      query: params as Record<string, string | number | boolean | undefined | null>,
-    });
-    return unwrap(raw);
-  },
-
-  async approveWithdrawal(id: number, body?: { note?: string }): Promise<Withdrawal> {
-    const raw = await api<Envelope<Withdrawal>>(`/api/v1/admin/withdrawals/${id}/approve/`, {
+  async approveSubmission(id: string, body?: { note?: string }): Promise<TemplateSubmission> {
+    return api<TemplateSubmission>(`/api/v1/template/submissions/${id}/approve`, {
       method: "PATCH",
       json: body ?? {},
     });
-    return unwrap(raw);
   },
 
-  async rejectWithdrawal(id: number, body: { rejection_reason: string }): Promise<Withdrawal> {
-    const raw = await api<Envelope<Withdrawal>>(`/api/v1/admin/withdrawals/${id}/reject/`, {
+  async rejectSubmission(id: string, body?: { note?: string }): Promise<TemplateSubmission> {
+    return api<TemplateSubmission>(`/api/v1/template/submissions/${id}/reject`, {
       method: "PATCH",
-      json: body,
+      json: body ?? {},
     });
-    return unwrap(raw);
   },
 
-  // Transactions
+  async submission(id: string): Promise<TemplateSubmission> {
+    return api<TemplateSubmission>(`/api/v1/template/submissions/${id}`);
+  },
+
+  async updateSubmission(
+    id: string,
+    body: Partial<Pick<TemplateSubmission, "name" | "description" | "status" | "note">> & {
+      categories?: string[];
+      features?: string[];
+    }
+  ): Promise<TemplateSubmission> {
+    return api<TemplateSubmission>(`/api/v1/template/submissions/${id}`, { method: "PATCH", json: body });
+  },
+
+  // Template-author earnings withdrawals.
+  async withdrawals(params?: { status?: string; page?: number }): Promise<Page<Withdrawal>> {
+    const { limit, offset } = toOffset(params?.page);
+    const raw = await api<RawPage<Withdrawal>>("/api/v1/template/withdrawals/admin", {
+      query: { status: params?.status, limit, offset },
+    });
+    return toPage(raw);
+  },
+
+  async approveWithdrawal(id: string, body?: { note?: string }): Promise<Withdrawal> {
+    return api<Withdrawal>(`/api/v1/template/withdrawals/${id}/approve`, { method: "PATCH", json: body ?? {} });
+  },
+
+  async rejectWithdrawal(id: string, body: { rejection_reason: string }): Promise<Withdrawal> {
+    return api<Withdrawal>(`/api/v1/template/withdrawals/${id}/reject`, { method: "PATCH", json: body });
+  },
+
+  // Transactions — admin-wide (all users). Only pagination is supported
+  // server-side (payment.AdminListTransactions takes no filter params at
+  // all); the old filter set (search/user/status/amount range/date range/
+  // ordering) has no backend support yet and is silently ignored.
   async transactions(params?: {
     search?: string;
     user?: string;
@@ -1022,310 +1040,336 @@ export const AdminAPI = {
     ordering?: string;
     page?: number;
   }): Promise<Page<AdminTransaction>> {
-    const raw = await api<Envelope<Page<AdminTransaction>>>("/api/v1/admin/transactions/", {
-      query: params as Record<string, string | number | boolean | undefined | null>,
+    const { limit, offset } = toOffset(params?.page);
+    const raw = await api<RawPage<Transaction>>("/api/v1/admin/payment/transactions", {
+      query: { limit, offset },
     });
-    return unwrap(raw);
+    return toPage(raw);
   },
 
-  async transaction(id: number): Promise<AdminTransactionDetail> {
-    const raw = await api<Envelope<AdminTransactionDetail>>(`/api/v1/admin/transactions/${id}/`);
-    return unwrap(raw);
+  // No GET-by-id route exists for admin transactions (payment.Handler has no
+  // admin detail endpoint) — fetch a page large enough to cover the backend's
+  // max page size (100) and find it client-side. Works at this data scale;
+  // would need a real backend route to scale further.
+  async transaction(id: string): Promise<AdminTransactionDetail> {
+    const raw = await api<RawPage<Transaction>>("/api/v1/admin/payment/transactions", {
+      query: { limit: 100, offset: 0 },
+    });
+    const found = raw.items.find((t) => t.id === id);
+    if (!found) return unavailable("Tranzaksiya topilmadi");
+    return found;
   },
 
-  // Bot payment orders (botdan tushgan to'lovlar) — by project and/or owner.
+  // Bot payment orders — admin-wide. Only `status` is supported server-side
+  // (payment.AdminListOrders); project/owner scoping (used by BotOrdersCard)
+  // is applied client-side after fetching a page large enough to cover the
+  // backend's max page size (100).
   async botOrders(params?: {
-    project?: number;
-    owner?: number;
+    project?: string;
+    owner?: string;
     status?: string;
     search?: string;
     ordering?: string;
     page?: number;
   }): Promise<Page<AdminBotOrder>> {
-    const raw = await api<Envelope<Page<AdminBotOrder>>>("/api/v1/admin/bot-orders/", {
-      query: params as Record<string, string | number | boolean | undefined | null>,
-    });
-    return unwrap(raw);
+    const raw = await api<RawPage<Omit<AdminBotOrder, "project"> & { project_id: string }>>(
+      "/api/v1/admin/payment/orders",
+      { query: { status: params?.status, limit: 100, offset: 0 } }
+    );
+    let items = raw.items.map((o) => ({ ...o, project: o.project_id }));
+    if (params?.project) items = items.filter((o) => o.project === params.project);
+    if (params?.owner) items = items.filter((o) => o.owner === params.owner);
+    return toPage({ items, total: items.length, limit: raw.limit, offset: 0 });
   },
 
-  // Plans
+  // Plans — read via the public /plans endpoint.
   async plans(): Promise<Plan[]> {
-    const raw = await api<Envelope<Plan[]>>("/api/v1/admin/plans/");
-    return unwrap(raw);
+    const raw = await api<Plan[]>("/api/v1/plans");
+    // The new backend tracks a single `max_tokens` budget (no separate
+    // input/output split) — mirror it into both legacy fields so the
+    // existing UI's "input + output" total still reads correctly.
+    return raw.map((p) => ({
+      ...p,
+      max_input_tokens: p.max_tokens ?? 0,
+      max_output_tokens: 0,
+    }));
   },
 
+  // Admin create/update/delete — /admin/plans (plan.AdminCreate/AdminUpdate/
+  // AdminDelete). The backend has one `max_tokens` budget field (no input/
+  // output split) and `sort_order` (not `order`) — translated here so the
+  // existing plan form (which still edits input/output/order) keeps working.
   async createPlan(body: Omit<Plan, "id">): Promise<Plan> {
-    const raw = await api<Envelope<Plan>>("/api/v1/admin/plans/", {
+    const raw = await api<Plan>("/api/v1/admin/plans", {
       method: "POST",
-      json: body,
+      json: {
+        name: body.name,
+        price: body.price,
+        description: body.description,
+        is_top: body.is_top,
+        is_active: body.is_active,
+        sort_order: body.order ?? 0,
+        max_bots: body.max_bots,
+        max_tokens: (body.max_input_tokens ?? 0) + (body.max_output_tokens ?? 0),
+      },
     });
-    return unwrap(raw);
+    return { ...raw, max_input_tokens: raw.max_tokens ?? 0, max_output_tokens: 0 };
   },
 
-  async updatePlan(id: number, body: Partial<Omit<Plan, "id">>): Promise<Plan> {
-    const raw = await api<Envelope<Plan>>(`/api/v1/admin/plans/${id}/`, {
-      method: "PATCH",
-      json: body,
-    });
-    return unwrap(raw);
+  async updatePlan(id: string, body: Partial<Omit<Plan, "id">>): Promise<Plan> {
+    const json: Record<string, unknown> = {};
+    if (body.name !== undefined) json.name = body.name;
+    if (body.price !== undefined) json.price = body.price;
+    if (body.description !== undefined) json.description = body.description;
+    if (body.is_top !== undefined) json.is_top = body.is_top;
+    if (body.is_active !== undefined) json.is_active = body.is_active;
+    if (body.order !== undefined) json.sort_order = body.order;
+    if (body.max_bots !== undefined) json.max_bots = body.max_bots;
+    if (body.max_input_tokens !== undefined || body.max_output_tokens !== undefined) {
+      json.max_tokens = (body.max_input_tokens ?? 0) + (body.max_output_tokens ?? 0);
+    }
+    const raw = await api<Plan>(`/api/v1/admin/plans/${id}`, { method: "PATCH", json });
+    return { ...raw, max_input_tokens: raw.max_tokens ?? 0, max_output_tokens: 0 };
   },
 
-  async deletePlan(id: number): Promise<void> {
-    await api<void>(`/api/v1/admin/plans/${id}/`, { method: "DELETE" });
+  async deletePlan(id: string): Promise<void> {
+    await api<void>(`/api/v1/admin/plans/${id}`, { method: "DELETE" });
   },
 
   // Tickets
   async tickets(params?: { status?: string; page?: number }): Promise<Page<AdminTicket>> {
-    const raw = await api<Envelope<Page<AdminTicket>>>("/api/v1/admin/tickets/", {
-      query: params as Record<string, string | number | boolean | undefined | null>,
+    const { limit, offset } = toOffset(params?.page);
+    const raw = await api<RawPage<AdminTicket>>("/api/v1/admin/tickets", {
+      query: { status: params?.status, limit, offset },
     });
-    return unwrap(raw);
+    return toPage(raw);
   },
 
-  async ticket(id: number): Promise<AdminTicket> {
-    const raw = await api<Envelope<AdminTicket>>(`/api/v1/admin/tickets/${id}/`);
-    return unwrap(raw);
+  async ticket(id: string): Promise<AdminTicket> {
+    return api<AdminTicket>(`/api/v1/admin/tickets/${id}`);
   },
 
-  async replyTicket(id: number, body: FormData): Promise<AdminTicket> {
-    const raw = await api<Envelope<AdminTicket>>(`/api/v1/admin/tickets/${id}/reply/`, {
+  async replyTicket(id: string, body: FormData): Promise<AdminTicket> {
+    // Old endpoint was POST /tickets/{id}/reply; the new admin route is
+    // /respond and only accepts JSON (message, attachment_url) — no file
+    // upload support. We translate the FormData the UI already builds.
+    const message = String(body.get("message") ?? "");
+    const attachment_url = body.get("attachment_url");
+    return api<AdminTicket>(`/api/v1/admin/tickets/${id}/respond`, {
       method: "POST",
-      body,
+      json: { message, attachment_url: typeof attachment_url === "string" ? attachment_url : undefined },
     });
-    return unwrap(raw);
   },
 
-  async closeTicket(id: number): Promise<AdminTicket> {
-    const raw = await api<Envelope<AdminTicket>>(`/api/v1/admin/tickets/${id}/close/`, {
-      method: "PATCH",
-      json: {},
-    });
-    return unwrap(raw);
+  async closeTicket(id: string): Promise<AdminTicket> {
+    return api<AdminTicket>(`/api/v1/admin/tickets/${id}/close`, { method: "POST", json: {} });
   },
 
   // Broadcast / Messages
   async sendBroadcast(body: SendBroadcastBody): Promise<BroadcastMessage> {
-    return api<BroadcastMessage>("/api/message/", {
+    return api<BroadcastMessage>("/api/v1/messages", {
       method: "POST",
-      json: { ...body, message_type: "text", button_type: "reply" },
+      json: { project_id: body.project, caption: body.caption, message_type: "text", button_type: "reply" },
     });
   },
 
-  async broadcastList(projectId: number): Promise<BroadcastMessage[]> {
-    type ListEnvelope = { results?: BroadcastMessage[] } | BroadcastMessage[];
-    const raw = await api<ListEnvelope>("/api/message/", {
-      query: { project: projectId },
-    });
-    if (Array.isArray(raw)) return raw;
-    if (raw && typeof raw === "object" && "results" in raw && Array.isArray(raw.results))
-      return raw.results;
-    return [];
+  async broadcastList(projectId: string): Promise<BroadcastMessage[]> {
+    const raw = await api<RawPage<BroadcastMessage>>("/api/v1/messages", { query: { project_id: projectId } });
+    return raw.items ?? [];
   },
 
-  // Platform config
+  // Platform config — legacy generic key/value settings surface. NOT
+  // available: the new backend only exposes two well-known config keys
+  // ("general", "ai") via /admin/settings/{key} — see generalSettings() /
+  // aiAgentSettings() below, which the settings pages now use instead.
   async configs(): Promise<PlatformConfig[]> {
-    const raw = await api<Envelope<unknown>>("/api/v1/shared/config/");
-    const data = unwrap(raw);
-    // Normalize: the list may come back as a bare array, a paginated
-    // { results: [...] } object, or a flat { key: value } dict — always
-    // return PlatformConfig[] so callers can safely .find()/.map().
-    if (Array.isArray(data)) return data as PlatformConfig[];
-    const results = (data as { results?: unknown })?.results;
-    if (Array.isArray(results)) return results as PlatformConfig[];
-    if (data && typeof data === "object") {
-      return Object.entries(data as Record<string, unknown>).map(
-        ([key, value]) => ({ key, value, label: key, group: "", is_public: true }) as PlatformConfig,
-      );
-    }
-    return [];
+    return unavailable("Platforma sozlamalari (config)");
   },
 
-  async updateConfig(key: string, value: string): Promise<PlatformConfig> {
-    const raw = await api<Envelope<PlatformConfig>>(`/api/v1/shared/config/${key}/`, {
-      method: "PATCH",
-      json: { value },
-    });
-    return unwrap(raw);
+  async updateConfig(_key: string, _value: string): Promise<PlatformConfig> {
+    return unavailable("Platforma sozlamasini yangilash");
   },
 
   // Audit log
   async auditLog(params?: {
     action?: string;
     target_type?: string;
-    target_id?: number;
-    actor?: number;
+    target_id?: string;
+    actor?: string;
     page?: number;
   }): Promise<Page<AuditLog>> {
-    const raw = await api<Envelope<Page<AuditLog>>>("/api/v1/admin/audit-log/", {
-      query: params as Record<string, string | number | boolean | undefined | null>,
+    const { limit, offset } = toOffset(params?.page);
+    const raw = await api<RawPage<AuditLog>>("/api/v1/admin/audit-log", {
+      query: { action: params?.action, target: params?.target_type, actor_id: params?.actor, limit, offset },
     });
-    return unwrap(raw);
+    return toPage(raw);
   },
 
-  // General settings (shared app SettingsModel / OptionsModel)
+  // General settings — legacy generic-group shape. NOT available (no
+  // key/group/option settings surface on this backend) — see
+  // generalSettings() below for the real (flat) equivalent.
   async getSettings(): Promise<SettingGroup[]> {
-    type RawEnvelope = { status: unknown; data: SettingGroup[] | { results?: SettingGroup[] } };
-    const raw = await api<RawEnvelope>("/api/v1/admin/settings/");
-    const data = raw.data;
-    if (Array.isArray(data)) return data;
-    if (data && typeof data === "object" && "results" in data && Array.isArray(data.results))
-      return data.results;
-    return [];
+    return unavailable("Umumiy sozlamalar");
   },
 
-  async setSetting(
-    settings_key: string,
-    option_key: string,
-    value: string[]
-  ): Promise<void> {
-    await api<unknown>("/api/v1/admin/settings/set/", {
-      method: "POST",
-      json: { settings_key, option_key, value },
-    });
+  async setSetting(_settings_key: string, _option_key: string, _value: string[]): Promise<void> {
+    return unavailable("Sozlamani saqlash");
   },
 
-  // Bot earnings withdrawals
+  // Real platform config store: two well-known keys, "general" and "ai" (see
+  // config.KeyGeneral / config.KeyAI). GET returns {key, value, updated_at};
+  // PUT replaces `value` wholesale with the raw JSON body.
+  async generalSettings(): Promise<GeneralSettings> {
+    const raw = await api<{ key: string; value: GeneralSettings; updated_at?: string }>(
+      "/api/v1/admin/settings/general"
+    );
+    return raw.value;
+  },
+
+  async updateGeneralSettings(body: GeneralSettings): Promise<GeneralSettings> {
+    const raw = await api<{ key: string; value: GeneralSettings; updated_at?: string }>(
+      "/api/v1/admin/settings/general",
+      { method: "PUT", json: body }
+    );
+    return raw.value;
+  },
+
+  async aiAgentSettings(): Promise<AiAgentSettings> {
+    const raw = await api<{ key: string; value: AiAgentSettings; updated_at?: string }>("/api/v1/admin/settings/ai");
+    return raw.value;
+  },
+
+  async updateAiAgentSettings(body: AiAgentSettings): Promise<AiAgentSettings> {
+    const raw = await api<{ key: string; value: AiAgentSettings; updated_at?: string }>(
+      "/api/v1/admin/settings/ai",
+      { method: "PUT", json: body }
+    );
+    return raw.value;
+  },
+
+  // Bot earnings withdrawals (payment module).
   async botWithdrawals(params?: { status?: string; page?: number }): Promise<Page<BotWithdrawal>> {
-    const raw = await api<Envelope<Page<BotWithdrawal>>>("/api/v1/admin/bot-withdrawals/", {
-      query: params as Record<string, string | number | boolean | undefined | null>,
+    const { limit, offset } = toOffset(params?.page);
+    const raw = await api<RawPage<BotWithdrawal>>("/api/v1/admin/payment/withdrawals", {
+      query: { status: params?.status, limit, offset },
     });
-    return unwrap(raw);
+    return toPage(raw);
   },
 
-  async botWithdrawal(id: number): Promise<BotWithdrawal> {
-    const raw = await api<Envelope<BotWithdrawal>>(`/api/v1/admin/bot-withdrawals/${id}/`);
-    return unwrap(raw);
+  async botWithdrawal(id: string): Promise<BotWithdrawal> {
+    return api<BotWithdrawal>(`/api/v1/admin/payment/withdrawals/${id}`);
   },
 
-  async approveBotWithdrawal(id: number, body?: { note?: string }): Promise<BotWithdrawal> {
-    const raw = await api<Envelope<BotWithdrawal>>(`/api/v1/admin/bot-withdrawals/${id}/approve/`, {
+  async approveBotWithdrawal(id: string, body?: { note?: string }): Promise<BotWithdrawal> {
+    return api<BotWithdrawal>(`/api/v1/admin/payment/withdrawals/${id}/approve`, {
       method: "PATCH",
       json: body ?? {},
     });
-    return unwrap(raw);
   },
 
-  async rejectBotWithdrawal(id: number, body: { rejection_reason: string }): Promise<BotWithdrawal> {
-    const raw = await api<Envelope<BotWithdrawal>>(`/api/v1/admin/bot-withdrawals/${id}/reject/`, {
-      method: "PATCH",
-      json: body,
-    });
-    return unwrap(raw);
+  async rejectBotWithdrawal(id: string, body: { rejection_reason: string }): Promise<BotWithdrawal> {
+    return api<BotWithdrawal>(`/api/v1/admin/payment/withdrawals/${id}/reject`, { method: "PATCH", json: body });
   },
 
   // KYC verifications
   async kycVerifications(params?: { status?: string; page?: number }): Promise<Page<KycVerification>> {
-    const raw = await api<Envelope<Page<KycVerification>>>("/api/v1/admin/kyc-verifications/", {
-      query: params as Record<string, string | number | boolean | undefined | null>,
+    const { limit, offset } = toOffset(params?.page);
+    const raw = await api<RawPage<KycVerification>>("/api/v1/kyc-verifications", {
+      query: { status: params?.status, limit, offset },
     });
-    return unwrap(raw);
+    return toPage(raw);
   },
 
-  async kycVerification(id: number): Promise<KycVerification> {
-    const raw = await api<Envelope<KycVerification>>(`/api/v1/admin/kyc-verifications/${id}/`);
-    return unwrap(raw);
+  async kycVerification(id: string): Promise<KycVerification> {
+    return api<KycVerification>(`/api/v1/kyc-verifications/${id}`);
   },
 
-  async approveKyc(id: number, body?: { note?: string }): Promise<KycVerification> {
-    const raw = await api<Envelope<KycVerification>>(`/api/v1/admin/kyc-verifications/${id}/approve/`, {
-      method: "PATCH",
-      json: body ?? {},
-    });
-    return unwrap(raw);
+  async approveKyc(id: string, body?: { note?: string }): Promise<KycVerification> {
+    return api<KycVerification>(`/api/v1/kyc-verifications/${id}/approve`, { method: "PATCH", json: body ?? {} });
   },
 
-  async rejectKyc(id: number, body: { rejection_reason: string }): Promise<KycVerification> {
-    const raw = await api<Envelope<KycVerification>>(`/api/v1/admin/kyc-verifications/${id}/reject/`, {
-      method: "PATCH",
-      json: body,
-    });
-    return unwrap(raw);
+  async rejectKyc(id: string, body: { rejection_reason: string }): Promise<KycVerification> {
+    return api<KycVerification>(`/api/v1/kyc-verifications/${id}/reject`, { method: "PATCH", json: body });
   },
 
-  // Blog
+  // Blog — full admin CRUD.
   async blogPosts(params?: { is_published?: string; page?: number }): Promise<Page<AdminBlogPost>> {
-    const raw = await api<Envelope<Page<AdminBlogPost>>>("/api/v1/admin/blog/", {
-      query: params as Record<string, string | number | boolean | undefined | null>,
+    const { limit, offset } = toOffset(params?.page);
+    const raw = await api<RawPage<AdminBlogPost>>("/api/v1/admin/blog", {
+      query: { is_published: params?.is_published, limit, offset },
     });
-    return unwrap(raw);
+    return toPage(raw);
   },
 
-  async blogPost(id: number): Promise<AdminBlogPost> {
-    const raw = await api<Envelope<AdminBlogPost>>(`/api/v1/admin/blog/${id}/`);
-    return unwrap(raw);
+  async blogPost(id: string): Promise<AdminBlogPost> {
+    return api<AdminBlogPost>(`/api/v1/admin/blog/${id}`);
   },
 
   async createBlogPost(body: BlogPostInput): Promise<AdminBlogPost> {
-    const raw = await api<Envelope<AdminBlogPost>>("/api/v1/admin/blog/", {
-      method: "POST",
-      json: body,
-    });
-    return unwrap(raw);
+    return api<AdminBlogPost>("/api/v1/admin/blog", { method: "POST", json: body });
   },
 
-  async updateBlogPost(id: number, body: Partial<BlogPostInput>): Promise<AdminBlogPost> {
-    const raw = await api<Envelope<AdminBlogPost>>(`/api/v1/admin/blog/${id}/`, {
-      method: "PATCH",
-      json: body,
-    });
-    return unwrap(raw);
+  async updateBlogPost(id: string, body: Partial<BlogPostInput>): Promise<AdminBlogPost> {
+    return api<AdminBlogPost>(`/api/v1/admin/blog/${id}`, { method: "PATCH", json: body });
   },
 
-  async deleteBlogPost(id: number): Promise<void> {
-    await api<void>(`/api/v1/admin/blog/${id}/`, { method: "DELETE" });
+  async deleteBlogPost(id: string): Promise<void> {
+    await api<void>(`/api/v1/admin/blog/${id}`, { method: "DELETE" });
   },
 
-  // External modules catalog (ModuleViewSet — plain DRF pagination, no envelope)
+  // Module catalog (plugin module) — full admin CRUD.
   async modules(params?: { search?: string; active?: string }): Promise<AdminModule[]> {
-    const raw = await api<{ results?: AdminModule[] } | AdminModule[]>("/api/modules/", {
-      query: params as Record<string, string | undefined>,
+    const raw = await api<RawPage<AdminModule>>("/api/v1/modules", {
+      query: { search: params?.search, active: params?.active },
     });
-    if (Array.isArray(raw)) return raw;
-    return raw.results ?? [];
+    return raw.items ?? [];
   },
 
   async module(slug: string): Promise<AdminModule> {
-    return api<AdminModule>(`/api/modules/${slug}/`);
+    return api<AdminModule>(`/api/v1/modules/${slug}`);
   },
 
   async createModule(body: AdminModuleInput): Promise<AdminModule> {
-    return api<AdminModule>("/api/modules/", { method: "POST", json: body });
+    return api<AdminModule>("/api/v1/modules", { method: "POST", json: body });
   },
 
   async updateModule(slug: string, body: Partial<AdminModuleInput>): Promise<AdminModule> {
-    return api<AdminModule>(`/api/modules/${slug}/`, { method: "PATCH", json: body });
+    return api<AdminModule>(`/api/v1/modules/${slug}`, { method: "PATCH", json: body });
   },
 
   async deleteModule(slug: string): Promise<void> {
-    await api<void>(`/api/modules/${slug}/`, { method: "DELETE" });
+    await api<void>(`/api/v1/modules/${slug}`, { method: "DELETE" });
   },
 
-  // Modul real-time holati (SSR uchun; client polling uchun module-status.ts ishlatilsin)
-  async moduleStatus(slug: string): Promise<import("./module-status").ModuleStatus> {
-    return api<import("./module-status").ModuleStatus>(`/api/modules/${slug}/status/`);
+  // Not available — no /modules/{slug}/status route on this backend.
+  async moduleStatus(_slug: string): Promise<import("./module-status").ModuleStatus> {
+    return unavailable("Modul real-time holati");
   },
 
-  // Re-fetch a module's manifest from its running pod (admin-only).
   async refreshModuleManifest(slug: string): Promise<void> {
-    await api<unknown>(`/api/modules/${slug}/refresh-manifest/`, { method: "POST" });
+    await api<unknown>(`/api/v1/modules/${slug}/refresh-manifest`, { method: "POST" });
   },
 
-  // Register (create or update) a module from a module.yaml — no envelope.
-  async registerModuleYaml(body: {
+  // Not available — no /modules/register-yaml route on this backend.
+  async registerModuleYaml(_body: {
     yaml?: string;
     yaml_url?: string;
   }): Promise<{ ok: boolean; mode: "github" | "endpoint"; module: AdminModule; build_job?: unknown; manifest?: unknown }> {
-    return api("/api/modules/register-yaml/", { method: "POST", json: body });
+    return unavailable("Moduleni YAML orqali ro'yxatdan o'tkazish");
   },
 
-  // Register a module from a GitHub repo URL — backend fetches module.yaml automatically.
-  async registerModuleGithub(body: {
+  // Not available — no /modules/register-github route on this backend.
+  async registerModuleGithub(_body: {
     repo_url: string;
   }): Promise<{ ok: boolean; mode: "github" | "endpoint"; module: AdminModule; build_job?: string; warning?: string }> {
-    return api("/api/modules/register-github/", { method: "POST", json: body });
+    return unavailable("Moduleni GitHub orqali ro'yxatdan o'tkazish");
   },
 
-  // Monitoring
+  // Monitoring — admin-wide per-project resource snapshot. Only `search` +
+  // pagination are supported server-side (project.AdminMonitoring); owner/
+  // is_template/has_release/ordering from the old UI are silently ignored.
+  // prometheus_available is always false — this backend has no live metrics
+  // scraper wired in (see project.dto.go toMonitoringListResponse).
   async monitoring(params?: {
     search?: string;
     owner?: string;
@@ -1335,50 +1379,67 @@ export const AdminAPI = {
     page?: number;
     page_size?: number;
   }): Promise<MonitoringPage> {
-    type RawPage = Page<AdminProjectUsage> & { prometheus_available?: boolean };
-    const raw = await api<Envelope<RawPage>>("/api/v1/admin/monitoring/", {
-      query: params as Record<string, string | number | boolean | undefined | null>,
+    const { limit, offset } = toOffset(params?.page, params?.page_size ?? PAGINATION_SIZE);
+    const raw = await api<
+      RawPage<{
+        id: string;
+        name: string;
+        username?: string;
+        owner_id: string;
+        owner_phone?: string;
+        release_status: string | null;
+        cpu_cores: number;
+        memory_bytes: number;
+        disk_bytes: number;
+        created_at: string;
+      }> & { prometheus_available: boolean }
+    >("/api/v1/admin/monitoring", {
+      query: { search: params?.search, limit, offset },
     });
-    const page = unwrap(raw);
-    return { ...page, prometheus_available: page.prometheus_available ?? false };
+    return {
+      ...toPage(raw),
+      results: raw.items.map((r) => ({
+        id: r.id,
+        name: r.name,
+        username: r.username ?? null,
+        owner_id: r.owner_id,
+        owner_phone: r.owner_phone ?? null,
+        owner_name: null,
+        release_status: r.release_status,
+        cpu_cores: r.cpu_cores,
+        memory_bytes: r.memory_bytes,
+        disk_bytes: r.disk_bytes,
+        created_at: r.created_at,
+      })),
+      prometheus_available: raw.prometheus_available,
+    };
   },
 
-  async monitoringHistory(id: number, range?: string): Promise<MonitoringHistory> {
-    const raw = await api<Envelope<MonitoringHistory>>(
-      `/api/v1/admin/monitoring/${id}/history/`,
-      { query: range ? { range } : undefined }
-    );
-    return unwrap(raw);
+  // No history endpoint exists on this backend (no monitoring time-series
+  // store) — the monitoring detail page degrades to showing the current
+  // snapshot only when this rejects.
+  async monitoringHistory(_id: string, _range?: string): Promise<MonitoringHistory> {
+    return unavailable("Monitoring tarixi");
   },
 
-  // Credential types
+  // Credential types — read-only registry (code-defined, not a DB table);
+  // no admin create/update/delete route exists. GET /admin/credential-types
+  // is the admin-panel-specific alias of this same registry listing.
   async credentialTypes(params?: { source?: string }): Promise<CredentialType[]> {
-    const raw = await api<Envelope<CredentialType[]> | CredentialType[]>(
-      "/api/v1/credentials/types/",
-      { query: params as Record<string, string | undefined> }
-    );
-    if (Array.isArray(raw)) return raw;
-    const e = raw as Envelope<CredentialType[]>;
-    return e.data ?? [];
-  },
-
-  async createCredentialType(body: CredentialTypeInput): Promise<CredentialType> {
-    const raw = await api<Envelope<CredentialType>>("/api/v1/credentials/types/", {
-      method: "POST",
-      json: body,
+    return api<CredentialType[]>("/api/v1/admin/credential-types", {
+      query: params as Record<string, string | undefined>,
     });
-    return unwrap(raw);
   },
 
-  async updateCredentialType(key: string, body: CredentialTypePatch): Promise<CredentialType> {
-    const raw = await api<Envelope<CredentialType>>(`/api/v1/credentials/types/${key}/`, {
-      method: "PATCH",
-      json: body,
-    });
-    return unwrap(raw);
+  async createCredentialType(_body: CredentialTypeInput): Promise<CredentialType> {
+    return unavailable("Credential turini yaratish");
   },
 
-  async deleteCredentialType(key: string): Promise<void> {
-    await api<void>(`/api/v1/credentials/types/${key}/`, { method: "DELETE" });
+  async updateCredentialType(_key: string, _body: CredentialTypePatch): Promise<CredentialType> {
+    return unavailable("Credential turini tahrirlash");
+  },
+
+  async deleteCredentialType(_key: string): Promise<void> {
+    return unavailable("Credential turini o'chirish");
   },
 };

@@ -6,7 +6,7 @@ export const metadata = { title: "Umumiy sozlamalar | BotSpace Admin" };
 export default async function GeneralSettingsPage() {
   let settings;
   try {
-    settings = await AdminAPI.getSettings();
+    settings = await AdminAPI.generalSettings();
   } catch {
     settings = null;
   }
@@ -16,7 +16,7 @@ export default async function GeneralSettingsPage() {
       <div>
         <h1 className="text-2xl font-bold">Umumiy sozlamalar</h1>
         <p className="text-muted-foreground text-sm">
-          Backend shared sozlamalari — engine versiyasi va boshqa global parametrlar
+          Platforma darajasidagi umumiy parametrlar — sayt nomi, aloqa va komissiya
         </p>
       </div>
 

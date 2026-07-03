@@ -1,10 +1,18 @@
 "use client";
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
-import { Save, ChevronDown, ChevronRight, Tag } from "lucide-react";
+import { Save, RotateCcw } from "lucide-react";
 import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
 import { Label } from "@/shared/components/ui/label";
+import { Switch } from "@/shared/components/ui/switch";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/shared/components/ui/select";
 import {
   Card,
   CardContent,
@@ -12,39 +20,28 @@ import {
   CardHeader,
   CardTitle,
 } from "@/shared/components/ui/card";
-import { type SettingGroup } from "@/shared/api/services";
-import { setSettingAction } from "./actions";
+import { type GeneralSettings } from "@/shared/api/services";
+import { updateGeneralSettingsAction } from "./actions";
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
+const LANGUAGES = [
+  { value: "uz", label: "O'zbekcha" },
+  { value: "ru", label: "Ruscha" },
+  { value: "en", label: "Inglizcha" },
+];
 
-/** Encode value[] as a comma-separated display string for the input */
-function encode(value: string[]): string {
-  return value.join(", ");
-}
-
-/** Split comma-separated input back into string[] */
-function decode(raw: string): string[] {
-  return raw
-    .split(",")
-    .map((s) => s.trim())
-    .filter(Boolean);
-}
-
-// ── Option row ────────────────────────────────────────────────────────────────
-
-type OptionRowProps = {
-  settingsKey: string;
-  optionKey: string;
-  initialValue: string[];
-  /** Highlight this row as the primary/important setting */
-  primary?: boolean;
+type Props = {
+  settings: GeneralSettings;
 };
 
-function OptionRow({ settingsKey, optionKey, initialValue, primary }: OptionRowProps) {
-  const [draft, setDraft] = useState<string>(encode(initialValue));
+export function GeneralSettingsForm({ settings }: Props) {
+  const [form, setForm] = useState<GeneralSettings>(settings);
   const [saving, startSave] = useTransition();
 
-  const isDirty = draft !== encode(initialValue);
+  const isDirty = JSON.stringify(form) !== JSON.stringify(settings);
+
+  function handleReset() {
+    setForm(settings);
+  }
 
   function handleSave() {
     if (!isDirty) {
@@ -52,162 +49,128 @@ function OptionRow({ settingsKey, optionKey, initialValue, primary }: OptionRowP
       return;
     }
     startSave(async () => {
-      const result = await setSettingAction(settingsKey, optionKey, decode(draft));
+      const result = await updateGeneralSettingsAction(form);
       if (result.ok) {
-        toast.success("Saqlandi", {
-          description: `${settingsKey}.${optionKey} yangilandi`,
-        });
+        toast.success("Saqlandi", { description: "Umumiy sozlamalar yangilandi" });
+        setForm(result.data);
       } else {
         toast.error("Saqlashda xatolik", { description: result.message });
       }
     });
   }
 
-  const inputId = `setting-${settingsKey}-${optionKey}`;
-
   return (
-    <div
-      className={`rounded-lg border p-4 transition-colors ${
-        primary
-          ? "border-primary/30 bg-primary/5 dark:bg-primary/10"
-          : "bg-card"
-      }`}
-    >
-      <div className="flex items-start justify-between gap-4">
-        <div className="min-w-0 flex-1 space-y-2">
-          <Label htmlFor={inputId} className="flex items-center gap-2">
-            {primary && <Tag className="h-3.5 w-3.5 text-primary shrink-0" />}
-            <span className="font-mono text-sm font-semibold">{optionKey}</span>
-            {primary && (
-              <span className="inline-flex items-center rounded-full border border-primary/40 bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary dark:bg-primary/20">
-                asosiy
-              </span>
-            )}
+    <Card className="max-w-2xl">
+      <CardHeader>
+        <CardTitle>Platforma sozlamalari</CardTitle>
+        <CardDescription>Sayt nomi, aloqa ma&apos;lumotlari va umumiy parametrlar.</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-6">
+        <div className="space-y-1.5">
+          <Label htmlFor="site-name">
+            Sayt nomi
+            <span className="ml-1.5 text-xs text-muted-foreground font-normal">site_name</span>
           </Label>
           <Input
-            id={inputId}
-            value={draft}
-            onChange={(e) => setDraft(e.target.value)}
-            className="font-mono text-sm"
-            placeholder="qiymat kiriting..."
+            id="site-name"
+            value={form.site_name}
+            onChange={(e) => setForm((p) => ({ ...p, site_name: e.target.value }))}
           />
-          {initialValue.length > 1 && (
-            <p className="text-xs text-muted-foreground">
-              Bir nechta qiymat vergul bilan ajrating.
-              Hozirgi:{" "}
-              <span className="font-mono">{encode(initialValue) || "—"}</span>
-            </p>
-          )}
         </div>
-        <Button
-          size="sm"
-          onClick={handleSave}
-          disabled={saving || !isDirty}
-          className="mt-6 shrink-0"
-        >
-          <Save className="h-3.5 w-3.5" />
-          {saving ? "Saqlanmoqda..." : "Saqlash"}
-        </Button>
-      </div>
-    </div>
-  );
-}
 
-// ── Group card ────────────────────────────────────────────────────────────────
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div className="space-y-1.5">
+            <Label htmlFor="support-email">
+              Qo&apos;llab-quvvatlash email
+              <span className="ml-1.5 text-xs text-muted-foreground font-normal">support_email</span>
+            </Label>
+            <Input
+              id="support-email"
+              type="email"
+              value={form.support_email}
+              onChange={(e) => setForm((p) => ({ ...p, support_email: e.target.value }))}
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="support-phone">
+              Qo&apos;llab-quvvatlash telefon
+              <span className="ml-1.5 text-xs text-muted-foreground font-normal">support_phone</span>
+            </Label>
+            <Input
+              id="support-phone"
+              value={form.support_phone}
+              onChange={(e) => setForm((p) => ({ ...p, support_phone: e.target.value }))}
+            />
+          </div>
+        </div>
 
-type GroupCardProps = {
-  group: SettingGroup;
-};
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div className="space-y-1.5">
+            <Label htmlFor="default-language">
+              Standart til
+              <span className="ml-1.5 text-xs text-muted-foreground font-normal">default_language</span>
+            </Label>
+            <Select
+              value={form.default_language}
+              onValueChange={(v) => setForm((p) => ({ ...p, default_language: v }))}
+            >
+              <SelectTrigger id="default-language" className="w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {LANGUAGES.map((l) => (
+                  <SelectItem key={l.value} value={l.value}>
+                    {l.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="commission-percent">
+              Komissiya foizi
+              <span className="ml-1.5 text-xs text-muted-foreground font-normal">commission_percent</span>
+            </Label>
+            <Input
+              id="commission-percent"
+              type="number"
+              min={0}
+              max={100}
+              step="0.1"
+              value={form.commission_percent}
+              onChange={(e) => setForm((p) => ({ ...p, commission_percent: Number(e.target.value) }))}
+            />
+          </div>
+        </div>
 
-function GroupCard({ group }: GroupCardProps) {
-  const [open, setOpen] = useState(true);
-
-  return (
-    <Card>
-      <CardHeader
-        className="cursor-pointer select-none"
-        onClick={() => setOpen((v) => !v)}
-      >
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between rounded-lg border p-4">
           <div className="space-y-0.5">
-            <CardTitle className="font-mono text-base">{group.key}</CardTitle>
-            {group.description && (
-              <CardDescription>{group.description}</CardDescription>
-            )}
-          </div>
-          <div className="flex items-center gap-3">
-            {!group.is_public && (
-              <span className="rounded-full border border-amber-300 bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-800 dark:border-amber-700 dark:bg-amber-950/40 dark:text-amber-300">
-                private
-              </span>
-            )}
-            <span className="text-xs text-muted-foreground">
-              {group.options.length} ta sozlama
-            </span>
-            {open ? (
-              <ChevronDown className="h-4 w-4 text-muted-foreground" />
-            ) : (
-              <ChevronRight className="h-4 w-4 text-muted-foreground" />
-            )}
-          </div>
-        </div>
-      </CardHeader>
-
-      {open && (
-        <CardContent className="space-y-3 pt-0">
-          {group.options.length === 0 ? (
-            <p className="text-sm text-muted-foreground">
-              Bu guruhda sozlamalar yo&apos;q.
+            <Label htmlFor="maintenance-mode">
+              Texnik xizmat rejimi
+              <span className="ml-1.5 text-xs text-muted-foreground font-normal">maintenance_mode</span>
+            </Label>
+            <p className="text-xs text-muted-foreground">
+              Yoqilganda platforma foydalanuvchilar uchun vaqtincha yopiladi.
             </p>
-          ) : (
-            group.options.map((opt) => {
-              // engine/version is the most-used setting — highlight it
-              const isPrimary =
-                group.key === "engine" && opt.key === "version";
-              return (
-                <OptionRow
-                  key={opt.key}
-                  settingsKey={group.key}
-                  optionKey={opt.key}
-                  initialValue={opt.value}
-                  primary={isPrimary}
-                />
-              );
-            })
-          )}
-        </CardContent>
-      )}
+          </div>
+          <Switch
+            id="maintenance-mode"
+            checked={form.maintenance_mode}
+            onCheckedChange={(checked) => setForm((p) => ({ ...p, maintenance_mode: checked }))}
+          />
+        </div>
+
+        <div className="flex items-center gap-3 pt-2">
+          <Button onClick={handleSave} disabled={saving || !isDirty}>
+            <Save className="h-4 w-4" />
+            {saving ? "Saqlanmoqda..." : "Saqlash"}
+          </Button>
+          <Button variant="outline" onClick={handleReset} disabled={saving || !isDirty}>
+            <RotateCcw className="h-4 w-4" />
+            Qaytarish
+          </Button>
+        </div>
+      </CardContent>
     </Card>
-  );
-}
-
-// ── Main form ─────────────────────────────────────────────────────────────────
-
-type Props = {
-  settings: SettingGroup[];
-};
-
-export function GeneralSettingsForm({ settings }: Props) {
-  if (settings.length === 0) {
-    return (
-      <div className="rounded-lg border p-12 text-center text-muted-foreground">
-        Hozircha hech qanday sozlama mavjud emas.
-      </div>
-    );
-  }
-
-  // Put "engine" group first so it is immediately visible
-  const sorted = [...settings].sort((a, b) => {
-    if (a.key === "engine") return -1;
-    if (b.key === "engine") return 1;
-    return a.key.localeCompare(b.key);
-  });
-
-  return (
-    <div className="max-w-2xl space-y-4">
-      {sorted.map((group) => (
-        <GroupCard key={group.key} group={group} />
-      ))}
-    </div>
   );
 }

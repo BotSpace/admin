@@ -5,7 +5,7 @@ import { Button } from "@/shared/components/ui/button";
 import { CheckCircle, XCircle } from "lucide-react";
 import { approveSubmissionAction, rejectSubmissionAction } from "./actions";
 
-export function SubmissionActions({ id }: { id: number }) {
+export function SubmissionActions({ id }: { id: string }) {
   async function handleApprove() {
     const res = await approveSubmissionAction(id);
     if (res.ok) toast.success("So'rov tasdiqlandi");

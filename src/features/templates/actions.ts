@@ -2,34 +2,26 @@
 import { revalidatePath } from "next/cache";
 import {
   AdminAPI,
-  type AdminTemplateDetail,
   type CreateTemplateBody,
+  type UpdateTemplateBody,
   type TemplateSubmission,
 } from "@/shared/api/services";
 import { isApiError } from "@/shared/api/client";
 
-export async function verifyTemplateAction(id: number, is_verify: boolean, note?: string) {
+export async function verifyTemplateAction(id: string, is_verify: boolean, note?: string) {
   try {
     await AdminAPI.verifyTemplate(id, { is_verify, note });
     revalidatePath("/templates");
+    revalidatePath(`/templates/${id}`);
     return { ok: true };
   } catch (e) {
     return { ok: false, message: isApiError(e) ? e.message : "Xatolik yuz berdi" };
   }
 }
 
-export async function updateTemplateAction(
-  id: number,
-  body: Partial<
-    Pick<
-      AdminTemplateDetail,
-      "name" | "short_description" | "description" | "original_price" | "discount" | "discount_type" | "is_verify" | "demo_url" | "spec"
-    >
-  >,
-  image?: File
-) {
+export async function updateTemplateAction(id: string, body: UpdateTemplateBody) {
   try {
-    await AdminAPI.updateTemplate(id, body, image);
+    await AdminAPI.updateTemplate(id, body);
     revalidatePath(`/templates/${id}`);
     revalidatePath("/templates");
     return { ok: true };
@@ -38,7 +30,7 @@ export async function updateTemplateAction(
   }
 }
 
-export async function resyncTemplateAction(id: number) {
+export async function resyncTemplateAction(id: string) {
   try {
     await AdminAPI.resyncTemplate(id);
     revalidatePath(`/templates/${id}`);
@@ -48,9 +40,9 @@ export async function resyncTemplateAction(id: number) {
   }
 }
 
-export async function createTemplateAction(body: CreateTemplateBody, image?: File) {
+export async function createTemplateAction(body: CreateTemplateBody) {
   try {
-    const created = await AdminAPI.createTemplate(body, image);
+    const created = await AdminAPI.createTemplate(body);
     revalidatePath("/templates");
     return { ok: true as const, id: created.id };
   } catch (e) {
@@ -58,7 +50,7 @@ export async function createTemplateAction(body: CreateTemplateBody, image?: Fil
   }
 }
 
-export async function previewTemplateSpecAction(projectId: number) {
+export async function previewTemplateSpecAction(projectId: string) {
   try {
     const data = await AdminAPI.previewTemplateSpec(projectId);
     return { ok: true as const, data };
@@ -67,9 +59,9 @@ export async function previewTemplateSpecAction(projectId: number) {
   }
 }
 
-export async function deleteTemplateAction(id: number, force?: boolean) {
+export async function deleteTemplateAction(id: string) {
   try {
-    await AdminAPI.deleteTemplate(id, force);
+    await AdminAPI.deleteTemplate(id);
     revalidatePath("/templates");
     return { ok: true as const };
   } catch (e) {
@@ -104,7 +96,7 @@ export async function searchProjectsAction(search: string) {
   }
 }
 
-export async function templateVersionsAction(id: number) {
+export async function templateVersionsAction(id: string) {
   try {
     const data = await AdminAPI.templateVersions(id);
     return { ok: true as const, data };
@@ -113,7 +105,7 @@ export async function templateVersionsAction(id: number) {
   }
 }
 
-export async function templateVersionAction(id: number, version: number) {
+export async function templateVersionAction(id: string, version: number) {
   try {
     const data = await AdminAPI.templateVersion(id, version);
     return { ok: true as const, data };
@@ -122,7 +114,7 @@ export async function templateVersionAction(id: number, version: number) {
   }
 }
 
-export async function rollbackTemplateAction(id: number, body: { version: number; note?: string }) {
+export async function rollbackTemplateAction(id: string, body: { version: number; note?: string }) {
   try {
     await AdminAPI.rollbackTemplate(id, body);
     revalidatePath(`/templates/${id}`);
@@ -133,8 +125,8 @@ export async function rollbackTemplateAction(id: number, body: { version: number
 }
 
 export async function updateSubmissionAction(
-  id: number,
-  body: Partial<Pick<TemplateSubmission, "name" | "description" | "status" | "note"> & { categories?: number[]; features?: number[] }>
+  id: string,
+  body: Partial<Pick<TemplateSubmission, "name" | "description" | "status" | "note"> & { categories?: string[]; features?: string[] }>
 ) {
   try {
     await AdminAPI.updateSubmission(id, body);
@@ -146,7 +138,7 @@ export async function updateSubmissionAction(
   }
 }
 
-export async function approveSubmissionAction(id: number, note?: string) {
+export async function approveSubmissionAction(id: string, note?: string) {
   try {
     await AdminAPI.approveSubmission(id, { note });
     revalidatePath("/templates/submissions");
@@ -156,7 +148,7 @@ export async function approveSubmissionAction(id: number, note?: string) {
   }
 }
 
-export async function rejectSubmissionAction(id: number, note?: string) {
+export async function rejectSubmissionAction(id: string, note?: string) {
   try {
     await AdminAPI.rejectSubmission(id, { note });
     revalidatePath("/templates/submissions");

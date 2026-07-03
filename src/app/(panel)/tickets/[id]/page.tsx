@@ -22,7 +22,7 @@ export default async function AdminTicketDetailPage({ params }: { params: Promis
 
   let ticket;
   try {
-    ticket = await AdminAPI.ticket(Number(id));
+    ticket = await AdminAPI.ticket(id);
   } catch {
     notFound();
   }
@@ -44,7 +44,10 @@ export default async function AdminTicketDetailPage({ params }: { params: Promis
           <div>
             <CardTitle className="text-lg">{ticket.subject}</CardTitle>
             <p className="mt-1 text-xs text-muted-foreground">
-              {ticket.user_phone ?? `#${ticket.user}`} · {format(new Date(ticket.created_at), "dd.MM.yyyy HH:mm")}
+              {/* Backend doesn't join requester identity onto tickets yet */}
+              {ticket.user_phone ?? (ticket.user ? `#${ticket.user}` : null)}
+              {ticket.user_phone || ticket.user ? " · " : ""}
+              {format(new Date(ticket.created_at), "dd.MM.yyyy HH:mm")}
             </p>
           </div>
           <Badge variant={meta.variant}>{meta.label}</Badge>

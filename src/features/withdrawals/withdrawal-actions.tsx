@@ -16,7 +16,7 @@ import { Label } from "@/shared/components/ui/label";
 import { CheckCircle, XCircle } from "lucide-react";
 import { approveWithdrawalAction, rejectWithdrawalAction } from "./actions";
 
-export function WithdrawalActions({ id }: { id: number }) {
+export function WithdrawalActions({ id }: { id: string }) {
   async function handleApprove() {
     const res = await approveWithdrawalAction(id);
     if (res.ok) toast.success("Yechib olish tasdiqlandi");
@@ -42,7 +42,7 @@ export function WithdrawalActions({ id }: { id: number }) {
   );
 }
 
-function RejectDialog({ id }: { id: number }) {
+function RejectDialog({ id }: { id: string }) {
   const [open, setOpen] = useState(false);
   const [reason, setReason] = useState("");
   const [loading, setLoading] = useState(false);

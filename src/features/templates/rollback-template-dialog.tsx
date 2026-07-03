@@ -16,7 +16,7 @@ import { Textarea } from "@/shared/components/ui/textarea";
 import { Undo2 } from "lucide-react";
 import { rollbackTemplateAction } from "./actions";
 
-export function RollbackTemplateDialog({ templateId, version }: { templateId: number; version: number }) {
+export function RollbackTemplateDialog({ templateId, version }: { templateId: string; version: number }) {
   const [open, setOpen] = useState(false);
   const [note, setNote] = useState("");
   const [loading, setLoading] = useState(false);

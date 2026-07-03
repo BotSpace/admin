@@ -27,7 +27,7 @@ export default async function KycDetailPage({ params }: { params: Promise<{ id: 
 
   let v;
   try {
-    v = await AdminAPI.kycVerification(Number(id));
+    v = await AdminAPI.kycVerification(id);
   } catch {
     notFound();
   }

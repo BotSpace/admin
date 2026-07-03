@@ -1,8 +1,9 @@
 "use client";
 import { useTheme } from "next-themes";
-import { Moon, Sun } from "lucide-react";
+import { Moon, Sun, LogOut } from "lucide-react";
 import { Button } from "@/shared/components/ui/button";
 import { env } from "@/shared/lib/env";
+import { logoutAction } from "@/app/login/actions";
 
 type Props = {
   userName?: string;
@@ -33,6 +34,11 @@ export function TopBar({ userName }: Props) {
         >
           Dashboard &rarr;
         </a>
+        <form action={logoutAction}>
+          <Button variant="ghost" size="icon" type="submit" aria-label="Chiqish">
+            <LogOut className="h-4 w-4" />
+          </Button>
+        </form>
       </div>
     </header>
   );

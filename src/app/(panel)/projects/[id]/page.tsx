@@ -52,7 +52,7 @@ export default async function ProjectDetailPage({
   const { id } = await params;
   let project: AdminProjectDetail;
   try {
-    project = await AdminAPI.project(Number(id));
+    project = await AdminAPI.project(id);
   } catch {
     notFound();
   }
@@ -167,7 +167,7 @@ export default async function ProjectDetailPage({
                 </dd>
 
                 <dt className="text-muted-foreground">Joriy node soni</dt>
-                <dd className="col-span-2 font-medium">{project.current_node_count}</dd>
+                <dd className="col-span-2 font-medium">{project.current_node_count ?? "—"}</dd>
               </dl>
             </CardContent>
           </Card>

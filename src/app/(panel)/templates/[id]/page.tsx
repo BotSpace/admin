@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
-import { AdminAPI, AdminTemplateDetail, TemplateVersion } from "@/shared/api/services";
+import { AdminAPI, AdminTemplateDetail } from "@/shared/api/services";
 import { Badge } from "@/shared/components/ui/badge";
 import {
   Card,
@@ -11,10 +11,7 @@ import {
 } from "@/shared/components/ui/card";
 import { VerifyToggle } from "@/features/templates/verify-toggle";
 import { TemplateEditDialog } from "@/features/templates/template-edit-dialog";
-import { SpecSection } from "@/features/templates/spec-section";
-import { ResyncButton } from "@/features/templates/resync-button";
 import { DeleteTemplateButton } from "@/features/templates/delete-template-button";
-import { TemplateVersionsCard } from "@/features/templates/template-versions-card";
 import { format } from "date-fns";
 import { ChevronLeft, ExternalLink } from "lucide-react";
 import { formatCurrency } from "@/shared/lib/utils";
@@ -36,20 +33,24 @@ export default async function TemplateDetailPage({
   const { id } = await params;
   let template: AdminTemplateDetail;
   try {
-    template = await AdminAPI.template(Number(id));
+    template = await AdminAPI.template(id);
   } catch {
     notFound();
   }
 
-  let versions: TemplateVersion[] = [];
+  let categories: { id: string; name: string }[] = [];
   try {
-    versions = await AdminAPI.templateVersions(template.id);
+    categories = await AdminAPI.templateCategories();
   } catch {
-    // degraded gracefully — versions history is non-critical
+    // degraded gracefully — edit dialog just won't offer category picking
   }
 
   const price = template.original_price ? Number(template.original_price) : null;
   const discount = template.discount ? Number(template.discount) : null;
+  // Ko'p muallif faqat Telegram orqali kirgan — phone bo'sh bo'lishi mumkin,
+  // shu holda ism (author_name) ko'rsatiladi.
+  const authorLabel =
+    template.author_phone || template.author_name || (template.author_id ? `#${template.author_id}` : null);
 
   return (
     <div className="space-y-6 max-w-4xl">
@@ -88,11 +89,7 @@ export default async function TemplateDetailPage({
           <Badge variant={template.is_verify ? "success" : "warn"}>
             {template.is_verify ? "Tasdiqlangan" : "Kutilmoqda"}
           </Badge>
-          {template.version !== undefined && (
-            <Badge variant="outline">v{template.version}</Badge>
-          )}
-          <TemplateEditDialog template={template} />
-          {template.has_project && <ResyncButton id={template.id} />}
+          <TemplateEditDialog template={template} categories={categories} />
           <VerifyToggle id={template.id} isVerify={template.is_verify} name={template.name} />
           <DeleteTemplateButton id={template.id} name={template.name} />
         </div>
@@ -116,6 +113,9 @@ export default async function TemplateDetailPage({
 
             <dt className="text-muted-foreground">Qisqa tavsif</dt>
             <dd className="col-span-2">{template.short_description || "—"}</dd>
+
+            <dt className="text-muted-foreground">Tavsif</dt>
+            <dd className="col-span-2 whitespace-pre-wrap">{template.description || "—"}</dd>
 
             <dt className="text-muted-foreground">Demo URL</dt>
             <dd className="col-span-2">
@@ -160,12 +160,27 @@ export default async function TemplateDetailPage({
 
             <dt className="text-muted-foreground">Muallif</dt>
             <dd className="col-span-2">
-              <Link
-                href={`/users/${template.author.id}`}
-                className="text-primary hover:underline"
-              >
-                {template.author.phone}
-              </Link>
+              {template.author_id ? (
+                <Link
+                  href={`/users/${template.author_id}`}
+                  className="text-primary hover:underline"
+                >
+                  {authorLabel}
+                </Link>
+              ) : (
+                "—"
+              )}
+            </dd>
+
+            <dt className="text-muted-foreground">Loyiha</dt>
+            <dd className="col-span-2">
+              {template.project_id ? (
+                <Link href={`/projects/${template.project_id}`} className="text-primary hover:underline font-mono">
+                  #{template.project_id}
+                </Link>
+              ) : (
+                "—"
+              )}
             </dd>
 
             <dt className="text-muted-foreground">Yaratilgan</dt>
@@ -221,41 +236,16 @@ export default async function TemplateDetailPage({
           <dl className="grid grid-cols-2 gap-x-8 gap-y-3 text-sm sm:grid-cols-3">
             <dt className="text-muted-foreground">Ko&apos;rishlar</dt>
             <dd className="col-span-2 font-medium tabular-nums">
-              {template.views.toLocaleString("uz-UZ")}
+              {(template.views ?? 0).toLocaleString("uz-UZ")}
             </dd>
 
             <dt className="text-muted-foreground">Yoqtirishlar</dt>
             <dd className="col-span-2 font-medium tabular-nums">
-              {(template.likes ?? 0).toLocaleString("uz-UZ")}
-            </dd>
-
-            <dt className="text-muted-foreground">Jami buyurtmalar</dt>
-            <dd className="col-span-2 font-medium tabular-nums">
-              {template.orders_total.toLocaleString("uz-UZ")}
-            </dd>
-
-            <dt className="text-muted-foreground">Tasdiqlangan buyurtmalar</dt>
-            <dd className="col-span-2 font-medium tabular-nums">
-              {template.orders_confirmed.toLocaleString("uz-UZ")}
-            </dd>
-
-            <dt className="text-muted-foreground">Node soni</dt>
-            <dd className="col-span-2 font-medium">
-              {template.node_count ?? "—"}
+              {(template.likes_count ?? 0).toLocaleString("uz-UZ")}
             </dd>
           </dl>
         </CardContent>
       </Card>
-
-      {/* Versiyalar tarixi */}
-      <TemplateVersionsCard
-        templateId={template.id}
-        currentVersion={template.version}
-        versions={versions}
-      />
-
-      {/* Shablon tarkibi (spec) */}
-      <SpecSection spec={template.spec ?? {}} />
     </div>
   );
 }

@@ -30,7 +30,7 @@ export default async function TemplatesPage({
   const sp = await searchParams;
   const page = Number(sp.page ?? 1);
 
-  let categories: { id: number; name: string }[] = [];
+  let categories: { id: string; name: string }[] = [];
   try {
     categories = await AdminAPI.templateCategories();
   } catch {
@@ -145,11 +145,22 @@ export default async function TemplatesPage({
             {
               key: "author",
               header: "Muallif",
-              cell: (t) => (
-                <span className="text-sm text-muted-foreground">
-                  {t.author_phone ?? `#${t.author}`}
-                </span>
-              ),
+              cell: (t) => {
+                // Ko'p foydalanuvchi faqat Telegram orqali kirgan — phone
+                // bo'sh bo'lishi mumkin, shu holda ism (author_name) ko'rsatiladi.
+                const label =
+                  t.author_phone || t.author_name || (t.author_id ? `#${t.author_id}` : "—");
+                return t.author_id ? (
+                  <Link
+                    href={`/users/${t.author_id}`}
+                    className="text-sm text-muted-foreground hover:text-foreground hover:underline"
+                  >
+                    {label}
+                  </Link>
+                ) : (
+                  <span className="text-sm text-muted-foreground">{label}</span>
+                );
+              },
             },
             {
               key: "verify",

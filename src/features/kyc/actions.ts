@@ -3,7 +3,7 @@ import { revalidatePath } from "next/cache";
 import { AdminAPI } from "@/shared/api/services";
 import { isApiError } from "@/shared/api/client";
 
-export async function approveKycAction(id: number, note?: string) {
+export async function approveKycAction(id: string, note?: string) {
   try {
     await AdminAPI.approveKyc(id, { note });
     revalidatePath("/kyc");
@@ -13,7 +13,7 @@ export async function approveKycAction(id: number, note?: string) {
   }
 }
 
-export async function rejectKycAction(id: number, rejection_reason: string) {
+export async function rejectKycAction(id: string, rejection_reason: string) {
   try {
     await AdminAPI.rejectKyc(id, { rejection_reason });
     revalidatePath("/kyc");

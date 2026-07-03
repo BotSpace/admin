@@ -13,7 +13,7 @@ export async function createPlanAction(body: Omit<Plan, "id">) {
   }
 }
 
-export async function updatePlanAction(id: number, body: Partial<Omit<Plan, "id">>) {
+export async function updatePlanAction(id: string, body: Partial<Omit<Plan, "id">>) {
   try {
     await AdminAPI.updatePlan(id, body);
     revalidatePath("/plans");
@@ -23,7 +23,7 @@ export async function updatePlanAction(id: number, body: Partial<Omit<Plan, "id"
   }
 }
 
-export async function deletePlanAction(id: number) {
+export async function deletePlanAction(id: string) {
   try {
     await AdminAPI.deletePlan(id);
     revalidatePath("/plans");
