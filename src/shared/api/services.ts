@@ -1415,11 +1415,19 @@ export const AdminAPI = {
     };
   },
 
-  // No history endpoint exists on this backend (no monitoring time-series
-  // store) — the monitoring detail page degrades to showing the current
-  // snapshot only when this rejects.
-  async monitoringHistory(_id: string, _range?: string): Promise<MonitoringHistory> {
-    return unavailable("Monitoring tarixi");
+  async monitoringHistory(id: string, range?: string): Promise<MonitoringHistory> {
+    const raw = await api<{
+      series: MonitoringHistorySeries;
+      prometheus_available: boolean;
+    }>(`/api/v1/admin/monitoring/${id}/history`, {
+      query: { range },
+    });
+    return {
+      range: range ?? "24h",
+      step: "",
+      prometheus_available: raw.prometheus_available,
+      series: raw.series,
+    };
   },
 
   // Credential types — read-only registry (code-defined, not a DB table);
