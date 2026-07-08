@@ -1,11 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { api } from "@/shared/api/server";
 import type { ModuleStatus } from "@/shared/api/services";
+import { requireAdmin } from "@/shared/auth/requireAdmin";
 
 export async function GET(
   _req: NextRequest,
   { params }: { params: Promise<{ slug: string }> }
 ) {
+  const denied = await requireAdmin();
+  if (denied) return denied;
+
   const { slug } = await params;
   try {
     const data = await api<ModuleStatus>(`/api/modules/${slug}/status/`);

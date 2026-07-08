@@ -143,6 +143,17 @@ export default async function middleware(request: NextRequest) {
     return redirect;
   }
 
+  // Authenticated is not enough — the admin app is staff-only. Reject any
+  // logged-in user who is not staff/superuser. The role travels inside the
+  // signed session cookie (SessionUser), so no extra API call is needed.
+  const user = state.session.user as { is_staff?: boolean; is_superuser?: boolean };
+  const isAdmin = Boolean(user?.is_staff || user?.is_superuser);
+  if (!isAdmin) {
+    const loginUrl = new URL("/login", request.url);
+    loginUrl.searchParams.set("error", "forbidden");
+    return NextResponse.redirect(loginUrl);
+  }
+
   const response = NextResponse.next();
   if (state.kind === "refreshed") applySessionCookie(response, state.cookie);
   return response;
