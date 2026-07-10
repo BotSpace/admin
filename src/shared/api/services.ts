@@ -851,7 +851,16 @@ export const AdminAPI = {
   }): Promise<Page<AdminProject>> {
     const { limit, offset } = toOffset(params?.page);
     const raw = await api<RawPage<AdminProject>>("/api/v1/admin/projects", {
-      query: { search: params?.search, limit, offset },
+      query: {
+        search: params?.search,
+        is_template: params?.is_template,
+        has_release: params?.has_release,
+        created_after: params?.created_after,
+        created_before: params?.created_before,
+        ordering: params?.ordering,
+        limit,
+        offset,
+      },
     });
     return toPage(raw);
   },
