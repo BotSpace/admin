@@ -137,15 +137,24 @@ function cms(projectId: string | number, ...parts: (string | number)[]): string 
   return `/api/v1/cms/projects/${projectId}/collections${tail ? "/" + tail : ""}`;
 }
 
+// Admin (read-only) CMS base. The owner-scoped /cms endpoints above only return
+// the caller's own projects; these /admin/cms endpoints (admin/superuser role,
+// backend cms/routes.go) resolve the project's real owner, so an admin can
+// browse ANY user's collections and documents. Reads only — writes stay on cms().
+function adminCms(projectId: string | number, ...parts: (string | number)[]): string {
+  const tail = parts.map((p) => encodeURIComponent(p)).join("/");
+  return `/api/v1/admin/cms/projects/${projectId}/collections${tail ? "/" + tail : ""}`;
+}
+
 // ── CmsAPI (mirrors dashboard CmsAPI, uses the admin's authed `api`) ─────────
 
 export const CmsAPI = {
   listCollections: async (projectId: string | number): Promise<CmsCollection[]> => {
-    const d = await api<unknown>(cms(projectId) + "/");
+    const d = await api<unknown>(adminCms(projectId) + "/");
     return Array.isArray(d) ? (d as CmsCollection[]) : unwrapList<CmsCollection>(d);
   },
   getCollection: (projectId: string | number, name: string): Promise<CmsCollection> =>
-    api<CmsCollection>(cms(projectId, name) + "/").then(unwrapItem<CmsCollection>),
+    api<CmsCollection>(adminCms(projectId, name) + "/").then(unwrapItem<CmsCollection>),
   createCollection: (
     projectId: string | number,
     body: {
@@ -206,7 +215,7 @@ export const CmsAPI = {
       query.filter = JSON.stringify(params.filter);
     }
     if (params.sort) query.sort = params.sort;
-    return api<CmsDocumentListResponse>(cms(projectId, name, "documents") + "/", { query });
+    return api<CmsDocumentListResponse>(adminCms(projectId, name, "documents") + "/", { query });
   },
   // Cursor pagination for relation pickers: pass the previous page's
   // next_cursor to fetch the next batch; optional search hits primary_field.
@@ -223,13 +232,13 @@ export const CmsAPI = {
     };
     if (params.cursor) query.cursor = params.cursor;
     if (params.search) query.search = params.search;
-    return api<CmsDocumentCursorResponse>(cms(projectId, name, "documents") + "/", { query });
+    return api<CmsDocumentCursorResponse>(adminCms(projectId, name, "documents") + "/", { query });
   },
   getDocument: (
     projectId: string | number,
     name: string,
     id: string
-  ): Promise<CmsDocument> => api<CmsDocument>(cms(projectId, name, "documents", id) + "/"),
+  ): Promise<CmsDocument> => api<CmsDocument>(adminCms(projectId, name, "documents", id) + "/"),
   insertDocument: (
     projectId: string | number,
     name: string,
