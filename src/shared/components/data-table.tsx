@@ -12,7 +12,7 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 
 export type Column<T> = {
   key: string;
-  header: string;
+  header: React.ReactNode;
   cell: (row: T) => React.ReactNode;
   className?: string;
 };

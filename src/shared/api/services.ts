@@ -687,6 +687,8 @@ export type AdminProjectUsage = {
   cpu_cores: number | null;
   memory_bytes: number | null;
   disk_bytes: number;
+  net_bytes: number;
+  is_template: boolean;
   created_at: string;
 };
 
@@ -1391,10 +1393,12 @@ export const AdminAPI = {
         cpu_cores: number;
         memory_bytes: number;
         disk_bytes: number;
+        net_bytes?: number;
+        is_template?: boolean;
         created_at: string;
       }> & { prometheus_available: boolean }
     >("/api/v1/admin/monitoring", {
-      query: { search: params?.search, limit, offset },
+      query: { search: params?.search, ordering: params?.ordering, limit, offset },
     });
     return {
       ...toPage(raw),
@@ -1409,6 +1413,8 @@ export const AdminAPI = {
         cpu_cores: r.cpu_cores,
         memory_bytes: r.memory_bytes,
         disk_bytes: r.disk_bytes,
+        net_bytes: r.net_bytes ?? 0,
+        is_template: r.is_template ?? false,
         created_at: r.created_at,
       })),
       prometheus_available: raw.prometheus_available,
