@@ -2,7 +2,7 @@ fullnameOverride: "admin"
 
 image:
   repository: registry.iprogrammer.uz/botspace/admin
-  tag: "f6c7e93"
+  tag: "55a9b85"
   pullPolicy: Always
 
 imagePullSecrets:
