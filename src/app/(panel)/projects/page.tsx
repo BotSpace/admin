@@ -1,9 +1,10 @@
 import Link from "next/link";
-import { AdminAPI } from "@/shared/api/services";
+import { AdminAPI, type AdminProjectUsage } from "@/shared/api/services";
 import { DataTable } from "@/shared/components/data-table";
 import { Badge } from "@/shared/components/ui/badge";
 import { DeleteProjectButton } from "@/features/projects/delete-project-button";
 import { ProjectsFilter } from "@/features/projects/projects-filter";
+import { formatBytes, formatCpu } from "@/features/monitoring/monitoring-utils";
 import { format } from "date-fns";
 
 type SearchParams = {
@@ -55,6 +56,23 @@ export default async function ProjectsPage({
     });
   } catch {
     result = null;
+  }
+
+  // Monitoring resurslarini (CPU/RAM/Disk) shu sahifadagi loyihalarga qo'shish.
+  // Bir xil search + oyna (page/page_size) bilan so'raymiz va id bo'yicha
+  // birlashtiramiz; topilmagan qatorlar "—" bo'lib qoladi.
+  const usageById = new Map<string, AdminProjectUsage>();
+  if (result) {
+    try {
+      const mon = await AdminAPI.monitoring({
+        search: sp.search,
+        page: result.current_page,
+        page_size: result.page_size,
+      });
+      for (const u of mon.results) usageById.set(u.id, u);
+    } catch {
+      // Monitoring endpoint xato bersa — resurs ustunlari "—" ko'rsatadi.
+    }
   }
 
   function buildPageHref(p: number): string {
@@ -145,6 +163,33 @@ export default async function ProjectsPage({
               key: "release_status",
               header: "Holat",
               cell: (p) => <ReleaseStatusBadge status={p.release_status} />,
+            },
+            {
+              key: "cpu",
+              header: "CPU",
+              cell: (p) => (
+                <span className="font-mono text-xs text-muted-foreground">
+                  {formatCpu(usageById.get(p.id)?.cpu_cores ?? null)}
+                </span>
+              ),
+            },
+            {
+              key: "memory",
+              header: "RAM",
+              cell: (p) => (
+                <span className="font-mono text-xs text-muted-foreground">
+                  {formatBytes(usageById.get(p.id)?.memory_bytes ?? null)}
+                </span>
+              ),
+            },
+            {
+              key: "disk",
+              header: "Disk",
+              cell: (p) => (
+                <span className="font-mono text-xs text-muted-foreground">
+                  {formatBytes(usageById.get(p.id)?.disk_bytes ?? null)}
+                </span>
+              ),
             },
             {
               key: "created",

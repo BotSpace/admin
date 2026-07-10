@@ -20,6 +20,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/shared/components/ui
 import { Button } from "@/shared/components/ui/button";
 import { DeleteProjectButton } from "@/features/projects/delete-project-button";
 import { BotOrdersCard } from "@/features/bot-orders/bot-orders-card";
+import { ProjectMonitoringTab } from "@/features/monitoring/project-monitoring-tab";
 import { format } from "date-fns";
 import { ChevronLeft, Database } from "lucide-react";
 
@@ -56,6 +57,16 @@ export default async function ProjectDetailPage({
   } catch {
     notFound();
   }
+
+  // Monitoring: current usage (matched out of the monitoring list by id) + the
+  // default-range history for the charts. Both degrade to null on failure so
+  // the tab still renders (mirrors the standalone /monitoring/[id] page).
+  const [usage, history] = await Promise.all([
+    AdminAPI.monitoring({ search: project.name, page_size: 50 })
+      .then((p) => p.results.find((r) => r.id === project.id) ?? null)
+      .catch(() => null),
+    AdminAPI.monitoringHistory(project.id, "24h").catch(() => null),
+  ]);
 
   return (
     <div className="space-y-6 max-w-4xl">
@@ -97,6 +108,7 @@ export default async function ProjectDetailPage({
           <TabsTrigger value="general">Umumiy</TabsTrigger>
           <TabsTrigger value="releases">Relizlar ({project.releases_count})</TabsTrigger>
           <TabsTrigger value="payments">To&apos;lovlar</TabsTrigger>
+          <TabsTrigger value="monitoring">Monitoring</TabsTrigger>
         </TabsList>
 
         {/* ── Umumiy: asosiy + texnik ── */}
@@ -224,6 +236,15 @@ export default async function ProjectDetailPage({
         {/* ── To'lovlar (botdan tushgan) ── */}
         <TabsContent value="payments">
           <BotOrdersCard project={project.id} />
+        </TabsContent>
+
+        {/* ── Monitoring (resurslar + tarix grafiklari) ── */}
+        <TabsContent value="monitoring">
+          <ProjectMonitoringTab
+            projectId={project.id}
+            usage={usage}
+            initialHistory={history}
+          />
         </TabsContent>
       </Tabs>
     </div>
