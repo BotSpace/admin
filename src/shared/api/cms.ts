@@ -106,12 +106,24 @@ export type CmsAuditEntry = {
 function unwrapList<T>(d: unknown): T[] {
   if (Array.isArray(d)) return d as T[];
   if (!d || typeof d !== "object") return [];
-  const e = d as { data?: { results?: T[] } | T[]; results?: T[] };
+  // The Go backend wraps list responses as { items: [...] } (httpx.OK +
+  // gin.H{"items": ...}). Older code only handled the Django-style
+  // { data: { results } } / { results } envelopes, so `items` fell through and
+  // the list rendered empty even on a 200 with data. Handle all shapes.
+  const e = d as {
+    data?: { results?: T[]; items?: T[] } | T[];
+    results?: T[];
+    items?: T[];
+  };
   if (Array.isArray((e.data as { results?: T[] })?.results)) {
     return (e.data as { results: T[] }).results;
   }
+  if (Array.isArray((e.data as { items?: T[] })?.items)) {
+    return (e.data as { items: T[] }).items;
+  }
   if (Array.isArray(e.data)) return e.data as T[];
   if (Array.isArray(e.results)) return e.results;
+  if (Array.isArray(e.items)) return e.items;
   return [];
 }
 
