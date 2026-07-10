@@ -60,7 +60,7 @@ export default async function ProjectDetailPage({
 
   // Monitoring: current usage (matched out of the monitoring list by id) + the
   // default-range history for the charts. Both degrade to null on failure so
-  // the tab still renders (mirrors the standalone /monitoring/[id] page).
+  // the tab still renders.
   const [usage, history] = await Promise.all([
     AdminAPI.monitoring({ search: project.name, page_size: 50 })
       .then((p) => p.results.find((r) => r.id === project.id) ?? null)
