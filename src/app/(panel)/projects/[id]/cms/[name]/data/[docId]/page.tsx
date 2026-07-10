@@ -47,7 +47,7 @@ export default async function ProjectCmsEditDocPage({
         <CardContent className="pt-6">
           <DocumentEditForm
             projectId={id}
-            collectionName={collection.name}
+            collectionName={collection.slug}
             fields={collection.fields ?? []}
             collections={collections}
             doc={doc}

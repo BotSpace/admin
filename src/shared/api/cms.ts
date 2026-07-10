@@ -53,6 +53,11 @@ export type CmsCollection = {
   id: number;
   project: number;
   name: string;
+  // URL-safe identifier (lowercase snake_case). ALL routing and API calls must
+  // use this, NOT `name` — `name` is a human label (e.g. "Chat tarixi") while
+  // slug is the backend key (e.g. "chat"); the `/collections/:slug` routes 404
+  // on the label.
+  slug: string;
   label?: string;
   description?: string;
   primary_field?: string;

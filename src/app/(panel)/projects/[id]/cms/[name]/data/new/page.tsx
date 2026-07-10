@@ -42,7 +42,7 @@ export default async function ProjectCmsNewDocPage({
         <CardContent className="pt-6">
           <DocumentForm
             projectId={id}
-            collectionName={collection.name}
+            collectionName={collection.slug}
             fields={collection.fields ?? []}
             collections={collections}
           />

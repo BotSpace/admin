@@ -53,7 +53,7 @@ export default async function ProjectCmsDataPage({
         <CardContent className="pt-6">
           <DataGrid
             projectId={id}
-            collectionName={collection.name}
+            collectionName={collection.slug}
             fields={collection.fields ?? []}
             collections={collections}
           />

@@ -57,7 +57,7 @@ export default async function ProjectCmsListPage({
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {collections.map((c) => (
-            <Link key={c.id} href={`/projects/${id}/cms/${c.name}/data`} className="block h-full">
+            <Link key={c.id} href={`/projects/${id}/cms/${c.slug}/data`} className="block h-full">
               <Card className="flex h-full flex-col overflow-hidden transition hover:border-primary/40">
                 <CardContent className="flex flex-1 flex-col space-y-3 p-5">
                   <div className="flex items-start justify-between gap-2">

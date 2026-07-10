@@ -63,7 +63,7 @@ export default async function ProjectCmsSchemaPage({
           {collection.can_delete !== false && !collection.system && (
             <DeleteCollectionButton
               projectId={id}
-              name={collection.name}
+              name={collection.slug}
               label={collection.label}
             />
           )}
@@ -80,7 +80,7 @@ export default async function ProjectCmsSchemaPage({
         <CardContent>
           <FieldEditor
             projectId={id}
-            collectionName={collection.name}
+            collectionName={collection.slug}
             initialFields={collection.fields ?? []}
             collections={collections}
             primaryField={collection.primary_field}
