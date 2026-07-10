@@ -131,7 +131,10 @@ function unwrapItem<T>(d: unknown): T {
 
 function cms(projectId: string | number, ...parts: (string | number)[]): string {
   const tail = parts.map((p) => encodeURIComponent(p)).join("/");
-  return `/api/cms/projects/${projectId}/collections${tail ? "/" + tail : ""}`;
+  // Path MUST start with "/api/v1" — applyApiPrefix (client.ts) only rewrites
+  // that segment to NEXT_PUBLIC_API_PREFIX (prod "/api/v2" -> gateway -> Go
+  // "/api/v1"). "/api/cms/..." bypassed the rewrite and 404'd in every env.
+  return `/api/v1/cms/projects/${projectId}/collections${tail ? "/" + tail : ""}`;
 }
 
 // ── CmsAPI (mirrors dashboard CmsAPI, uses the admin's authed `api`) ─────────
