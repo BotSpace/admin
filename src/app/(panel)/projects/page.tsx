@@ -65,7 +65,7 @@ export default async function ProjectsPage({
   const resourceSort = isResourceOrdering(ordering);
 
   let rows: Row[] = [];
-  let usageById = new Map<string, AdminProjectUsage>();
+  const usageById = new Map<string, AdminProjectUsage>();
   let currentPage = 1;
   let totalPages = 1;
   let totalItems = 0;
