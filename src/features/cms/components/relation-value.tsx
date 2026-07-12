@@ -78,7 +78,7 @@ export function RelationValue({
     return () => {
       cancelled = true;
     };
-  }, [projectId, target?.name, id, resolved]);
+  }, [projectId, target, id, resolved]);
 
   if (!id) return <span className="text-muted-foreground">—</span>;
   const display = resolved || label;

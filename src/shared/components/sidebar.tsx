@@ -6,7 +6,6 @@ import {
   Users,
   FolderOpen,
   LayoutTemplate,
-  CheckSquare,
   Wallet,
   Banknote,
   ArrowLeftRight,
