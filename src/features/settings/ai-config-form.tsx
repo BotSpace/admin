@@ -26,6 +26,7 @@ import { updateAiSettingsAction } from "./actions";
 const PROVIDER_OPTIONS = [
   { value: "anthropic", label: "Anthropic" },
   { value: "openai", label: "OpenAI" },
+  { value: "deepseek", label: "DeepSeek" },
   { value: "openrouter", label: "OpenRouter" },
   { value: "gemini", label: "Google Gemini" },
   { value: "ollama", label: "Ollama" },
