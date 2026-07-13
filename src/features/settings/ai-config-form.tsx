@@ -23,6 +23,9 @@ import {
 import { type AiAgentSettings } from "@/shared/api/services";
 import { updateAiSettingsAction } from "./actions";
 
+// Provider values map 1:1 to the agent's build_effective_client() branches
+// (ai_agent.provider). DeepSeek is OpenAI-compatible (base_url api.deepseek.com);
+// use model ids deepseek-v4-flash / deepseek-v4-pro.
 const PROVIDER_OPTIONS = [
   { value: "anthropic", label: "Anthropic" },
   { value: "openai", label: "OpenAI" },
