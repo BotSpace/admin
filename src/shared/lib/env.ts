@@ -12,6 +12,11 @@ const schema = z.object({
   SESSION_COOKIE_NAME: z.string().default("bm_session"),
   SESSION_COOKIE_DOMAIN: z.string().optional(),
   SESSION_SECRET: z.string().min(16),
+  // Server-to-server access to the agent service for read-only admin views
+  // (a user's AI-agent conversations). In-cluster the agent is reachable at
+  // http://agent:8100; the internal token gates its /admin/* endpoints.
+  AGENT_API_URL: z.string().url().default("http://agent:8100"),
+  AGENT_INTERNAL_API_TOKEN: z.string().optional(),
 });
 
 const parsed = schema.safeParse({
@@ -21,6 +26,8 @@ const parsed = schema.safeParse({
   SESSION_COOKIE_NAME: process.env.SESSION_COOKIE_NAME,
   SESSION_COOKIE_DOMAIN: process.env.SESSION_COOKIE_DOMAIN,
   SESSION_SECRET: process.env.SESSION_SECRET,
+  AGENT_API_URL: process.env.AGENT_API_URL,
+  AGENT_INTERNAL_API_TOKEN: process.env.AGENT_INTERNAL_API_TOKEN,
 });
 
 const isBuildPhase = process.env.NEXT_PHASE === "phase-production-build";
@@ -52,4 +59,6 @@ export const env = parsed.success
       SESSION_SECRET:
         process.env.SESSION_SECRET ??
         (process.env.NODE_ENV === "production" ? "" : "dev-secret-change-me-please-32chars"),
+      AGENT_API_URL: process.env.AGENT_API_URL ?? "http://agent:8100",
+      AGENT_INTERNAL_API_TOKEN: process.env.AGENT_INTERNAL_API_TOKEN,
     };

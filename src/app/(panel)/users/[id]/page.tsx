@@ -18,6 +18,7 @@ import {
 } from "@/shared/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/shared/components/ui/tabs";
 import { UserActions } from "@/features/users/user-actions";
+import { UserAgentChats } from "@/features/users/user-agent-chats";
 import { BotOrdersCard } from "@/features/bot-orders/bot-orders-card";
 import { format } from "date-fns";
 import { ChevronLeft } from "lucide-react";
@@ -112,6 +113,7 @@ export default async function UserDetailPage({
           <TabsTrigger value="projects">Loyihalar ({user.projects_count})</TabsTrigger>
           <TabsTrigger value="payments">To&apos;lovlar</TabsTrigger>
           <TabsTrigger value="templates">Shablonlar</TabsTrigger>
+          <TabsTrigger value="ai-chats">AI suhbatlar</TabsTrigger>
         </TabsList>
 
         {/* ── Umumiy: profil + balanslar + tarif ── */}
@@ -408,6 +410,16 @@ export default async function UserDetailPage({
               )}
             </CardContent>
           </Card>
+        </TabsContent>
+
+        {/* ── AI suhbatlar (agent bilan yozishmalar) ── */}
+        <TabsContent value="ai-chats">
+          <UserAgentChats
+            userId={user.id}
+            projectNames={Object.fromEntries(
+              user.projects.map((p) => [p.id, p.name])
+            )}
+          />
         </TabsContent>
       </Tabs>
     </div>

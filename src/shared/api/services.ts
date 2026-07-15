@@ -84,7 +84,7 @@ export type AdminUser = {
   is_staff: boolean;
   is_superuser: boolean;
   date_joined: string; // alias of created_at
-  tokens_used_total: number; // always 0 — not tracked per-user by this backend
+  tokens_used_total: number; // AI-agent token usage (subscription input+output)
 };
 
 function toAdminUser(u: {
@@ -102,6 +102,7 @@ function toAdminUser(u: {
   validated_at: string | null;
   created_at: string;
   updated_at: string;
+  tokens_used_total?: number;
 }): AdminUser {
   return {
     ...u,
@@ -111,7 +112,9 @@ function toAdminUser(u: {
     is_staff: u.role === "admin",
     is_superuser: u.role === "superuser",
     date_joined: u.created_at,
-    tokens_used_total: 0,
+    // AI-agent token usage (subscription tokens_used_input + output), surfaced
+    // by the admin list endpoint; falls back to 0 for older payloads.
+    tokens_used_total: u.tokens_used_total ?? 0,
   };
 }
 
@@ -788,12 +791,22 @@ export const AdminAPI = {
     ordering?: string;
     page?: number;
   }): Promise<Page<AdminUser>> {
-    // Only `search` + pagination are supported server-side; the rest of the
-    // old filter set (role/is_active/plan/date range/balance range/ordering)
-    // has no backend support yet and is silently ignored — see report.
     const { limit, offset } = toOffset(params?.page);
     const raw = await api<RawPage<Parameters<typeof toAdminUser>[0]>>("/api/v1/users", {
-      query: { search: params?.search, limit, offset },
+      query: {
+        search: params?.search,
+        role: params?.role,
+        is_active: params?.is_active,
+        is_staff: params?.is_staff,
+        plan: params?.plan,
+        joined_after: params?.joined_after,
+        joined_before: params?.joined_before,
+        balance_min: params?.balance_min,
+        balance_max: params?.balance_max,
+        ordering: params?.ordering,
+        limit,
+        offset,
+      },
     });
     return toPage({ ...raw, items: raw.items.map(toAdminUser) });
   },

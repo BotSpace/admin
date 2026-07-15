@@ -25,6 +25,9 @@ configMaps:
     NEXT_PUBLIC_DASHBOARD_URL: "https://botspace.uz"
     SESSION_COOKIE_NAME: "bm_session"
     SESSION_COOKIE_DOMAIN: ".botspace.uz"
+    # Server-to-server reads of a user's AI-agent chats (admin user detail).
+    # In-cluster agent service; AGENT_INTERNAL_API_TOKEN comes from admin-secret.
+    AGENT_API_URL: "http://agent:8100"
 
 envFrom:
   - secretRef:
