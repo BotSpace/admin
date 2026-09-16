@@ -2,6 +2,8 @@ import "server-only";
 import { api, apiFetch } from "./server";
 import type { ApiError } from "./client";
 import { PAGINATION_SIZE } from "@/shared/lib/constants";
+import { attributedHistory, attributedResources } from "@/shared/api/monitoring-contract";
+import { projectListQuery, type ProjectListParams } from "@/shared/api/project-list-query";
 
 // ────────────────────────────────────────────────────────────────────────
 // Pagination
@@ -677,9 +679,25 @@ export type AdminModuleInput = {
   is_default?: boolean;
 };
 
-// ── Monitoring (NOT available — see report) ─────────────────────────────────
+// ── Bot analytics and attributed resource monitoring ───────────────────────
 
-export type AdminProjectUsage = {
+export type BotAnalytics = {
+  users_total: number;
+  active_users_24h: number;
+  active_users_7d: number;
+  messages_24h: number;
+  last_activity_at: string | null;
+};
+
+export type BotStatistics = {
+  totals: BotAnalytics;
+  projects_total: number;
+  top_bots: (BotAnalytics & { id: string; name: string; username?: string })[];
+};
+
+export type AdminProjectUsage = BotAnalytics & {
+  resource_metrics_available: boolean;
+  analytics_available: boolean;
   id: string;
   name: string;
   username: string | null;
@@ -690,12 +708,15 @@ export type AdminProjectUsage = {
   cpu_cores: number | null;
   memory_bytes: number | null;
   disk_bytes: number;
-  net_bytes: number;
+  net_bytes: number | null;
   is_template: boolean;
   created_at: string;
 };
 
-export type MonitoringPage = Page<AdminProjectUsage> & { prometheus_available: boolean };
+export type MonitoringPage = Page<AdminProjectUsage> & {
+  prometheus_available: boolean;
+  analytics_available: boolean;
+};
 
 export type MonitoringHistorySeries = {
   cpu_cores: [number, number][];
@@ -708,6 +729,7 @@ export type MonitoringHistorySeries = {
 export type MonitoringHistory = {
   range: string;
   step: string;
+  resource_metrics_available: boolean;
   prometheus_available: boolean;
   series: MonitoringHistorySeries;
 };
@@ -848,32 +870,10 @@ export const AdminAPI = {
     return AdminAPI.user(id);
   },
 
-  // Projects — admin-wide (all owners). Only `search` + pagination are
-  // supported server-side (project.AdminList); owner/is_template/has_release/
-  // date-range/ordering filters from the old UI have no backend support yet
-  // and are silently ignored.
-  async projects(params?: {
-    search?: string;
-    owner?: string;
-    is_template?: string;
-    has_release?: string;
-    created_after?: string;
-    created_before?: string;
-    ordering?: string;
-    page?: number;
-  }): Promise<Page<AdminProject>> {
-    const { limit, offset } = toOffset(params?.page);
+  // SQL-backed filters and creation/name ordering. Analytics ordering uses monitoring.
+  async projects(params?: ProjectListParams): Promise<Page<AdminProject>> {
     const raw = await api<RawPage<AdminProject>>("/api/v1/admin/projects", {
-      query: {
-        search: params?.search,
-        is_template: params?.is_template,
-        has_release: params?.has_release,
-        created_after: params?.created_after,
-        created_before: params?.created_before,
-        ordering: params?.ordering,
-        limit,
-        offset,
-      },
+      query: projectListQuery(params, PAGINATION_SIZE),
     });
     return toPage(raw);
   },
@@ -1389,42 +1389,41 @@ export const AdminAPI = {
     return unavailable("Moduleni GitHub orqali ro'yxatdan o'tkazish");
   },
 
-  // Monitoring — admin-wide per-project resource snapshot. Only `search` +
-  // pagination are supported server-side (project.AdminMonitoring); owner/
-  // is_template/has_release/ordering from the old UI are silently ignored.
-  // prometheus_available is always false — this backend has no live metrics
-  // scraper wired in (see project.dto.go toMonitoringListResponse).
-  async monitoring(params?: {
-    search?: string;
-    owner?: string;
-    is_template?: string;
-    has_release?: string;
-    ordering?: string;
-    page?: number;
-    page_size?: number;
-  }): Promise<MonitoringPage> {
-    const { limit, offset } = toOffset(params?.page, params?.page_size ?? PAGINATION_SIZE);
+  async projectStatistics(id: string): Promise<BotAnalytics> {
+    return api<BotAnalytics>(`/api/v1/admin/projects/${id}/statistics`);
+  },
+
+  async botStatistics(ordering: "activity_desc" | "users_desc" = "activity_desc", limit = 20): Promise<BotStatistics> {
+    return api<BotStatistics>("/api/v1/admin/stats/bots", { query: { ordering, limit } });
+  },
+
+  // All project filters apply before global resource/analytics sorting and pagination.
+  async monitoring(params?: ProjectListParams): Promise<MonitoringPage> {
     const raw = await api<
-      RawPage<{
+      RawPage<BotAnalytics & {
         id: string;
         name: string;
         username?: string;
         owner_id: string;
         owner_phone?: string;
         release_status: string | null;
+        resource_metrics_available: boolean;
         cpu_cores: number;
         memory_bytes: number;
         disk_bytes: number;
-        net_bytes?: number;
-        is_template?: boolean;
+        net_bytes: number;
+        is_template: boolean;
         created_at: string;
-      }> & { prometheus_available: boolean }
+      }> & { prometheus_available: boolean; analytics_available: boolean }
     >("/api/v1/admin/monitoring", {
-      query: { search: params?.search, ordering: params?.ordering, limit, offset },
+      query: projectListQuery(params, PAGINATION_SIZE),
     });
     return {
       ...toPage(raw),
       results: raw.items.map((r) => ({
+        ...r,
+        analytics_available: raw.analytics_available === true,
+        ...attributedResources(r, raw.prometheus_available),
         id: r.id,
         name: r.name,
         username: r.username ?? null,
@@ -1432,20 +1431,19 @@ export const AdminAPI = {
         owner_phone: r.owner_phone ?? null,
         owner_name: null,
         release_status: r.release_status,
-        cpu_cores: r.cpu_cores,
-        memory_bytes: r.memory_bytes,
         disk_bytes: r.disk_bytes,
-        net_bytes: r.net_bytes ?? 0,
         is_template: r.is_template ?? false,
         created_at: r.created_at,
       })),
       prometheus_available: raw.prometheus_available,
+      analytics_available: raw.analytics_available === true,
     };
   },
 
   async monitoringHistory(id: string, range?: string): Promise<MonitoringHistory> {
     const raw = await api<{
       series: MonitoringHistorySeries;
+      resource_metrics_available: boolean;
       prometheus_available: boolean;
     }>(`/api/v1/admin/monitoring/${id}/history`, {
       query: { range },
@@ -1453,8 +1451,9 @@ export const AdminAPI = {
     return {
       range: range ?? "24h",
       step: "",
+      resource_metrics_available: raw.resource_metrics_available === true,
       prometheus_available: raw.prometheus_available,
-      series: raw.series,
+      series: attributedHistory(raw),
     };
   },
 

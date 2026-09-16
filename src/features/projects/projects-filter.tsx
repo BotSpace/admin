@@ -15,6 +15,7 @@ import { ChevronDown, ChevronUp } from "lucide-react";
 
 type Props = {
   defaultSearch?: string;
+  defaultOwner?: string;
   defaultIsTemplate?: string;
   defaultHasRelease?: string;
   defaultCreatedAfter?: string;
@@ -24,6 +25,7 @@ type Props = {
 
 export function ProjectsFilter({
   defaultSearch,
+  defaultOwner,
   defaultIsTemplate,
   defaultHasRelease,
   defaultCreatedAfter,
@@ -33,6 +35,7 @@ export function ProjectsFilter({
   const router = useRouter();
   const pathname = usePathname();
   const searchRef = useRef<HTMLInputElement>(null);
+  const ownerRef = useRef<HTMLInputElement>(null);
   const createdAfterRef = useRef<HTMLInputElement>(null);
   const createdBeforeRef = useRef<HTMLInputElement>(null);
 
@@ -50,6 +53,7 @@ export function ProjectsFilter({
 
     const params = new URLSearchParams();
     const search = get("search", searchRef, defaultSearch);
+    const owner = get("owner", ownerRef, defaultOwner);
     const isTemplateVal = overrides.is_template !== undefined ? overrides.is_template : isTemplate;
     const hasReleaseVal = overrides.has_release !== undefined ? overrides.has_release : hasRelease;
     const createdAfterVal = get("created_after", createdAfterRef, defaultCreatedAfter);
@@ -57,6 +61,7 @@ export function ProjectsFilter({
     const orderingVal = overrides.ordering !== undefined ? overrides.ordering : ordering;
 
     if (search) params.set("search", search);
+    if (owner) params.set("owner", owner);
     if (isTemplateVal) params.set("is_template", isTemplateVal);
     if (hasReleaseVal) params.set("has_release", hasReleaseVal);
     if (createdAfterVal) params.set("created_after", createdAfterVal);
@@ -85,6 +90,17 @@ export function ProjectsFilter({
             ref={searchRef}
             defaultValue={defaultSearch}
             placeholder="Loyiha yoki egasi..."
+            className="w-60"
+          />
+        </div>
+
+        <div className="flex flex-col gap-1">
+          <Label htmlFor="project-owner" className="text-xs text-muted-foreground">Egasi (UUID)</Label>
+          <Input
+            id="project-owner"
+            ref={ownerRef}
+            defaultValue={defaultOwner}
+            placeholder="Egasi UUID"
             className="w-60"
           />
         </div>
@@ -184,6 +200,18 @@ export function ProjectsFilter({
                   <SelectItem value="-created_at">Yangi → eski</SelectItem>
                   <SelectItem value="created_at">Eski → yangi</SelectItem>
                   <SelectItem value="name">Nom (A-Z)</SelectItem>
+                  <SelectItem value="users_desc">Foydalanuvchilar ↓</SelectItem>
+                  <SelectItem value="users_asc">Foydalanuvchilar ↑</SelectItem>
+                  <SelectItem value="activity_desc">Faollik (24s) ↓</SelectItem>
+                  <SelectItem value="activity_asc">Faollik (24s) ↑</SelectItem>
+                  <SelectItem value="cpu_desc">CPU ↓</SelectItem>
+                  <SelectItem value="cpu_asc">CPU ↑</SelectItem>
+                  <SelectItem value="ram_desc">RAM ↓</SelectItem>
+                  <SelectItem value="ram_asc">RAM ↑</SelectItem>
+                  <SelectItem value="disk_desc">Disk ↓</SelectItem>
+                  <SelectItem value="disk_asc">Disk ↑</SelectItem>
+                  <SelectItem value="net_desc">Network ↓</SelectItem>
+                  <SelectItem value="net_asc">Network ↑</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -197,7 +225,7 @@ export function ProjectsFilter({
             }}
           >
             <div className="flex flex-col gap-1">
-              <Label className="text-xs text-muted-foreground">Yaratilgan (dan)</Label>
+              <Label className="text-xs text-muted-foreground">Yaratilgan (dan, UTC)</Label>
               <Input
                 ref={createdAfterRef}
                 type="date"
@@ -207,7 +235,7 @@ export function ProjectsFilter({
             </div>
 
             <div className="flex flex-col gap-1">
-              <Label className="text-xs text-muted-foreground">Yaratilgan (gacha)</Label>
+              <Label className="text-xs text-muted-foreground">Yaratilgan (gacha, UTC)</Label>
               <Input
                 ref={createdBeforeRef}
                 type="date"

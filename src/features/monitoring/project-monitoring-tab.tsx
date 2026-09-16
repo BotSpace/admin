@@ -30,7 +30,7 @@ export function ProjectMonitoringTab({ projectId, usage, initialHistory }: Props
   const [pending, startTransition] = useTransition();
 
   function selectRange(next: string) {
-    if (next === range) return;
+    if (next === range && history) return;
     setRange(next);
     startTransition(async () => {
       setHistory(await fetchMonitoringHistoryAction(projectId, next));
@@ -41,6 +41,15 @@ export function ProjectMonitoringTab({ projectId, usage, initialHistory }: Props
 
   return (
     <div className="space-y-6">
+      <p className="text-xs text-muted-foreground">
+        Pool CPU/RAM — botning alohida child-process CPU/RSS o&apos;lchovlari, umumiy worker ulushi emas.
+        Pool uchun per-bot tarmoq metrikasi mavjud emas; tarmoq grafigi faqat dedicated pod namunalari bo&apos;lsa ko&apos;rsatiladi.
+      </p>
+      {(!usage || !usage.resource_metrics_available) && (
+        <p role="status" className="text-sm text-amber-700 dark:text-amber-300">
+          Joriy CPU/RAM o&apos;lchovlari mavjud emas — bu nol sarf degani emas.
+        </p>
+      )}
       {/* Joriy resurslar */}
       {usage && (
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
@@ -49,7 +58,7 @@ export function ProjectMonitoringTab({ projectId, usage, initialHistory }: Props
               <CardTitle className="text-xs text-muted-foreground font-normal">CPU (hozir)</CardTitle>
             </CardHeader>
             <CardContent className="px-4 pb-4">
-              <p className="font-mono text-lg font-semibold">{formatCpu(usage.cpu_cores)}</p>
+              <p className="font-mono text-lg font-semibold">{formatCpu(usage.resource_metrics_available ? usage.cpu_cores : null)}</p>
             </CardContent>
           </Card>
           <Card>
@@ -57,7 +66,7 @@ export function ProjectMonitoringTab({ projectId, usage, initialHistory }: Props
               <CardTitle className="text-xs text-muted-foreground font-normal">RAM (hozir)</CardTitle>
             </CardHeader>
             <CardContent className="px-4 pb-4">
-              <p className="font-mono text-lg font-semibold">{formatBytes(usage.memory_bytes)}</p>
+              <p className="font-mono text-lg font-semibold">{formatBytes(usage.resource_metrics_available ? usage.memory_bytes : null)}</p>
             </CardContent>
           </Card>
           <Card>
@@ -71,9 +80,14 @@ export function ProjectMonitoringTab({ projectId, usage, initialHistory }: Props
         </div>
       )}
 
-      {(!history || !history.prometheus_available) && (
+      {(!history || !history.prometheus_available || !history.resource_metrics_available) && (
         <div className="rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:border-amber-700 dark:bg-amber-900/20 dark:text-amber-300">
-          Prometheus ulanmagan — CPU, RAM va Tarmoq grafiklari ko&apos;rsatilmaydi. Disk baribir ko&apos;rinadi.
+          {!history
+            ? "Tarixni yuklab bo'lmadi. Qayta urinish uchun vaqt oralig'ini bosing."
+            : !history.prometheus_available
+              ? "Prometheus ma'lumotlari hozir mavjud emas."
+              : "Bu vaqt oralig'ida botga tegishli CPU/RAM namunalari mavjud emas."}
+          {" "}Disk faqat saqlangan loyiha namunalari bo&apos;lsa ko&apos;rsatiladi.
         </div>
       )}
 
@@ -102,14 +116,14 @@ export function ProjectMonitoringTab({ projectId, usage, initialHistory }: Props
           <MetricChart
             title="CPU (vCPU)"
             showDate={showDate}
-            series={{ kind: "single", data: history.series.cpu_cores, format: "cpu" }}
+            series={{ kind: "single", data: history.prometheus_available && history.resource_metrics_available ? history.series.cpu_cores : [], format: "cpu" }}
           />
           <MetricChart
             title="RAM"
             showDate={showDate}
             series={{
               kind: "single",
-              data: history.series.memory_bytes,
+              data: history.prometheus_available && history.resource_metrics_available ? history.series.memory_bytes : [],
               color: "oklch(0.627 0.194 154.9)",
               format: "bytes",
             }}
@@ -119,8 +133,8 @@ export function ProjectMonitoringTab({ projectId, usage, initialHistory }: Props
             showDate={showDate}
             series={{
               kind: "double",
-              data1: history.series.net_rx_bps,
-              data2: history.series.net_tx_bps,
+              data1: history.prometheus_available ? history.series.net_rx_bps : [],
+              data2: history.prometheus_available ? history.series.net_tx_bps : [],
               label1: "Kirish (RX)",
               label2: "Chiqish (TX)",
               color1: "oklch(0.488 0.243 264.376)",

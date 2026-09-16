@@ -2,6 +2,16 @@
  * Humanize helperlari — monitoring uchun.
  */
 
+export function formatCount(value: number | null | undefined): string {
+  return value == null ? "—" : new Intl.NumberFormat("en-US").format(value);
+}
+
+export function formatActivity(value: string | null | undefined): string {
+  if (!value) return "Faollik yo'q";
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? "—" : date.toISOString().slice(0, 16).replace("T", " ");
+}
+
 /** Baytlarni odam o'qiy oladigan formatga (B / KB / MB / GB / TB). */
 export function formatBytes(bytes: number | null | undefined): string {
   if (bytes === null || bytes === undefined) return "—";

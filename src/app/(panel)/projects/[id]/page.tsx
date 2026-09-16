@@ -21,6 +21,8 @@ import { Button } from "@/shared/components/ui/button";
 import { DeleteProjectButton } from "@/features/projects/delete-project-button";
 import { BotOrdersCard } from "@/features/bot-orders/bot-orders-card";
 import { ProjectMonitoringTab } from "@/features/monitoring/project-monitoring-tab";
+import { BotAnalyticsCard } from "@/features/monitoring/bot-analytics-card";
+import { loadUsage } from "@/features/projects/load-projects";
 import { format } from "date-fns";
 import { ChevronLeft, Database } from "lucide-react";
 
@@ -58,14 +60,12 @@ export default async function ProjectDetailPage({
     notFound();
   }
 
-  // Monitoring: current usage (matched out of the monitoring list by id) + the
-  // default-range history for the charts. Both degrade to null on failure so
-  // the tab still renders.
-  const [usage, history] = await Promise.all([
-    AdminAPI.monitoring({ search: project.name, page_size: 50 })
-      .then((p) => p.results.find((r) => r.id === project.id) ?? null)
+  const [usage, history, statistics] = await Promise.all([
+    loadUsage(AdminAPI, [project.id], { search: project.name, owner: project.owner.id })
+      .then((items) => items.get(project.id) ?? null)
       .catch(() => null),
     AdminAPI.monitoringHistory(project.id, "24h").catch(() => null),
+    AdminAPI.projectStatistics(project.id).catch(() => null),
   ]);
 
   return (
@@ -102,6 +102,8 @@ export default async function ProjectDetailPage({
           <DeleteProjectButton id={project.id} name={project.name} />
         </div>
       </div>
+
+      <BotAnalyticsCard statistics={statistics} />
 
       <Tabs defaultValue="general">
         <TabsList>

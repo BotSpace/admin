@@ -4,23 +4,14 @@ import { DataTable } from "@/shared/components/data-table";
 import { Badge } from "@/shared/components/ui/badge";
 import { DeleteProjectButton } from "@/features/projects/delete-project-button";
 import { ProjectsFilter } from "@/features/projects/projects-filter";
-import { formatBytes, formatCpu } from "@/features/monitoring/monitoring-utils";
+import { loadProjects, type ProjectFilters } from "@/features/projects/load-projects";
+import { formatActivity, formatCount, formatBytes, formatCpu } from "@/features/monitoring/monitoring-utils";
 import { format } from "date-fns";
 import { ArrowDown, ArrowUp, ArrowUpDown } from "lucide-react";
 
-type SearchParams = {
-  search?: string;
-  is_template?: string;
-  has_release?: string;
-  created_after?: string;
-  created_before?: string;
-  ordering?: string;
-  page?: string;
-};
+type SearchParams = ProjectFilters;
 
-// Common row shape the table renders — satisfied by both the projects list
-// (AdminProject) and the monitoring list (AdminProjectUsage) so a resource sort
-// can swap the data source without changing the columns.
+// SQL and monitoring endpoints share the project identity columns.
 type Row = {
   id: string;
   name: string;
@@ -30,11 +21,6 @@ type Row = {
   release_status?: string | null;
   created_at: string;
 };
-
-const RESOURCE_ORDERING = /^(cpu|ram|disk|net)_(asc|desc)$/;
-function isResourceOrdering(o?: string): boolean {
-  return !!o && RESOURCE_ORDERING.test(o);
-}
 
 // Oxirgi reliz holatini "bot ishlayaptimi" ko'rinishida ko'rsatadi.
 function ReleaseStatusBadge({ status }: { status?: string | null }) {
@@ -60,61 +46,29 @@ export default async function ProjectsPage({
   searchParams: Promise<SearchParams>;
 }) {
   const sp = await searchParams;
-  const page = Number(sp.page ?? 1);
   const ordering = sp.ordering;
-  const resourceSort = isResourceOrdering(ordering);
 
   let rows: Row[] = [];
-  const usageById = new Map<string, AdminProjectUsage>();
+  let usageById = new Map<string, AdminProjectUsage>();
   let currentPage = 1;
   let totalPages = 1;
   let totalItems = 0;
   let loadError = false;
 
-  if (resourceSort) {
-    // Resource sort is done server-side by the monitoring endpoint; its rows
-    // carry both the project fields and the resource metrics, so use them for
-    // the table AND the metric columns.
-    try {
-      const mon = await AdminAPI.monitoring({ search: sp.search, ordering, page });
-      rows = mon.results;
-      mon.results.forEach((u) => usageById.set(u.id, u));
-      currentPage = mon.current_page;
-      totalPages = mon.total_pages;
-      totalItems = mon.total_items;
-    } catch {
-      loadError = true;
-    }
-  } else {
-    try {
-      const result = await AdminAPI.projects({
-        search: sp.search,
-        is_template: sp.is_template,
-        has_release: sp.has_release,
-        created_after: sp.created_after,
-        created_before: sp.created_before,
-        ordering: sp.ordering,
-        page,
-      });
-      rows = result.results;
-      currentPage = result.current_page;
-      totalPages = result.total_pages;
-      totalItems = result.total_items;
-      // Merge the page's resource metrics from the monitoring endpoint (same
-      // window); rows not found show "—".
-      try {
-        const mon = await AdminAPI.monitoring({
-          search: sp.search,
-          page: result.current_page,
-          page_size: result.page_size,
-        });
-        mon.results.forEach((u) => usageById.set(u.id, u));
-      } catch {
-        // metrics unavailable — columns fall back to "—"
-      }
-    } catch {
-      loadError = true;
-    }
+  try {
+    const result = await loadProjects(AdminAPI, sp);
+    rows = result.results;
+    usageById = result.usage;
+    currentPage = result.current_page;
+    totalPages = result.total_pages;
+    totalItems = result.total_items;
+  } catch {
+    loadError = true;
+  }
+
+  function analytics(id: string) {
+    const usage = usageById.get(id);
+    return usage?.analytics_available ? usage : null;
   }
 
   function withParams(overrides: Partial<SearchParams>): string {
@@ -130,7 +84,7 @@ export default async function ProjectsPage({
     return withParams({ page: String(p) });
   }
 
-  // Cycles a resource column: none → desc → asc → none.
+  // Sorting resets pagination but preserves every filter.
   function sortHref(field: string): string {
     let next: string | undefined;
     if (ordering === `${field}_desc`) next = `${field}_asc`;
@@ -165,7 +119,9 @@ export default async function ProjectsPage({
       </div>
 
       <ProjectsFilter
+        key={JSON.stringify(sp)}
         defaultSearch={sp.search}
+        defaultOwner={sp.owner}
         defaultIsTemplate={sp.is_template}
         defaultHasRelease={sp.has_release}
         defaultCreatedAfter={sp.created_after}
@@ -173,9 +129,15 @@ export default async function ProjectsPage({
         defaultOrdering={sp.ordering}
       />
 
-      {resourceSort && (
-        <p className="text-xs text-muted-foreground">
-          Resurs bo&apos;yicha saralashda boshqa filtrlar (turi, sana) qo&apos;llanmaydi.
+      <p className="text-xs text-muted-foreground">
+        Faollik — oxirgi 24 soatdagi kiruvchi va chiquvchi hodisalar soni.
+        Foydalanuvchilar — saqlangan tarixdagi noyob kiruvchi foydalanuvchilar.
+        «—» — ma&apos;lumot mavjud emas; bu nol degani emas.
+        Pool CPU/RAM har bir bot jarayoniga tegishli; pool uchun alohida tarmoq metrikasi yo&apos;q.
+      </p>
+      {!loadError && rows.some((row) => !analytics(row.id)) && (
+        <p role="status" className="text-sm text-amber-700 dark:text-amber-300">
+          Ayrim botlar statistikasi hozir mavjud emas.
         </p>
       )}
 
@@ -237,6 +199,31 @@ export default async function ProjectsPage({
               key: "release_status",
               header: "Holat",
               cell: (p) => <ReleaseStatusBadge status={p.release_status} />,
+            },
+            {
+              key: "users",
+              header: <SortHeader field="users" label="Foydalanuvchilar" />,
+              cell: (p) => formatCount(analytics(p.id)?.users_total),
+            },
+            {
+              key: "active24h",
+              header: "Faol (24s)",
+              cell: (p) => formatCount(analytics(p.id)?.active_users_24h),
+            },
+            {
+              key: "active7d",
+              header: "Faol (7 kun)",
+              cell: (p) => formatCount(analytics(p.id)?.active_users_7d),
+            },
+            {
+              key: "activity",
+              header: <SortHeader field="activity" label="Faollik (24s)" />,
+              cell: (p) => formatCount(analytics(p.id)?.messages_24h),
+            },
+            {
+              key: "last_activity",
+              header: "Oxirgi faollik (UTC)",
+              cell: (p) => analytics(p.id) ? formatActivity(analytics(p.id)?.last_activity_at) : "—",
             },
             {
               key: "cpu",
